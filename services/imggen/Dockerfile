@@ -6,7 +6,8 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     HUGGINGFACE_HUB_CACHE=/cache/hf/hub \
     TRANSFORMERS_CACHE=/cache/hf/transformers
 
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git curl iputils-ping && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir --upgrade diffusers transformers huggingface_hub accelerate
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu121 torch==2.3.1+cu121

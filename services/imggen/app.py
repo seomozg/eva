@@ -3,14 +3,23 @@ from fastapi import FastAPI, Response
 from pydantic import BaseModel
 from diffusers import AutoPipelineForText2Image
 from PIL import Image
+from huggingface_hub import login
 
 MODEL_ID = os.environ.get("IMG_MODEL_ID", "stabilityai/sd-turbo")
 dtype = torch.float16
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+
+hf_token = os.getenv("HF_TOKEN")
+if hf_token:
+    login(token=hf_token)
+
 pipe = AutoPipelineForText2Image.from_pretrained(
-    MODEL_ID, torch_dtype=dtype if device == "cuda" else torch.float32
+    "stabilityai/sd-turbo",
+    token=hf_token,
+    torch_dtype=dtype if device == "cuda" else torch.float32
 )
+
 if device == "cuda":
     pipe = pipe.to("cuda")
 
