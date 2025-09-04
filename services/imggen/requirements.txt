@@ -1,0 +1,9 @@
+fastapi==0.111.1
+uvicorn[standard]==0.30.3
+torch==2.3.1+cu121 ; platform_system == 'Linux'
+diffusers==0.30.3
+transformers==4.44.2
+accelerate==0.33.0
+safetensors==0.4.3
+numpy==1.26.4
+Pillow==10.4.0

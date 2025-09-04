@@ -1,0 +1,5 @@
+fastapi==0.111.1
+uvicorn[standard]==0.30.3
+torch==2.3.1+cu121 ; platform_system == 'Linux'
+numpy==1.26.4
+soundfile==0.12.1

@@ -1,0 +1,68 @@
+services:
+  textgen:
+    build: ./services/textgen
+    ports: ["8001:8001"]
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - HF_HOME=${HF_HOME:-/cache/hf}
+      - HUGGINGFACE_HUB_CACHE=${HUGGINGFACE_HUB_CACHE:-/cache/hf/hub}
+      - TRANSFORMERS_CACHE=${TRANSFORMERS_CACHE:-/cache/hf/transformers}
+      - HF_HUB_ENABLE_HF_TRANSFER=${HF_HUB_ENABLE_HF_TRANSFER:-1}
+    volumes:
+      - hf_cache:/cache/hf
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+
+  translate:
+    build: ./services/translate
+    ports: ["8002:8002"]
+    environment:
+      - HF_HOME=${HF_HOME:-/cache/hf}
+      - HUGGINGFACE_HUB_CACHE=${HUGGINGFACE_HUB_CACHE:-/cache/hf/hub}
+      - TRANSFORMERS_CACHE=${TRANSFORMERS_CACHE:-/cache/hf/transformers}
+    volumes:
+      - hf_cache:/cache/hf
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+
+  tts:
+    build: ./services/tts
+    ports: ["8003:8003"]
+    environment:
+      - HF_HOME=${HF_HOME:-/cache/hf}
+      - HUGGINGFACE_HUB_CACHE=${HUGGINGFACE_HUB_CACHE:-/cache/hf/hub}
+      - TRANSFORMERS_CACHE=${TRANSFORMERS_CACHE:-/cache/hf/transformers}
+    volumes:
+      - hf_cache:/cache/hf
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+
+  imggen:
+    build: ./services/imggen
+    ports: ["8004:8004"]
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - HF_HOME=${HF_HOME:-/cache/hf}
+      - HUGGINGFACE_HUB_CACHE=${HUGGINGFACE_HUB_CACHE:-/cache/hf/hub}
+      - TRANSFORMERS_CACHE=${TRANSFORMERS_CACHE:-/cache/hf/transformers}
+      - HF_HUB_ENABLE_HF_TRANSFER=${HF_HUB_ENABLE_HF_TRANSFER:-1}
+    volumes:
+      - hf_cache:/cache/hf
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+
+volumes:
+  hf_cache:
+    driver: local
