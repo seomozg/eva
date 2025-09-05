@@ -4,3 +4,4 @@ transformers==4.44.2
 torch==2.3.1+cu121 ; platform_system == 'Linux'
 sacremoses==0.1.1
 safetensors==0.4.3
+sentencepiece
