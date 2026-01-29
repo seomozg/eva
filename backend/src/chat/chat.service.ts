@@ -692,7 +692,9 @@ export class ChatService {
         this.logger.log('Successfully parsed girl data');
         const appearance = parsed.appearance;
         const name = this.generateRandomFemaleName();
+        this.logger.log(`Generating avatar for girl: ${name} with appearance: ${appearance}`);
         const avatarUrl = await this.generateImage(`${appearance}, in bikini`, undefined, userId, true);
+        this.logger.log(`Generated avatar URL: ${avatarUrl}`);
 
         // Save girl to database
         const girl = this.girlRepository.create({
@@ -759,6 +761,7 @@ export class ChatService {
 
   private async downloadAndSaveFile(url: string, type: 'image' | 'video'): Promise<string> {
     try {
+      this.logger.log(`Downloading ${type} from: ${url}`);
       const response = await firstValueFrom(
         this.httpService.get(url, { responseType: 'arraybuffer' })
       );
@@ -766,19 +769,26 @@ export class ChatService {
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${type === 'image' ? 'jpg' : 'mp4'}`;
       const filePath = path.join(__dirname, '..', 'uploads', type === 'image' ? 'images' : 'videos', fileName);
 
+      this.logger.log(`Saving ${type} to: ${filePath}`);
+
       // Ensure directory exists
       const dir = path.dirname(filePath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
+        this.logger.log(`Created directory: ${dir}`);
       }
 
       // Save file
       fs.writeFileSync(filePath, Buffer.from(response.data));
+      this.logger.log(`Successfully saved ${type} file: ${fileName}`);
 
       // Return local URL
-      return `/uploads/${type === 'image' ? 'images' : 'videos'}/${fileName}`;
+      const localUrl = `/uploads/${type === 'image' ? 'images' : 'videos'}/${fileName}`;
+      this.logger.log(`Returning local URL: ${localUrl}`);
+      return localUrl;
     } catch (error) {
       this.logger.error(`Error downloading and saving ${type}:`, error);
+      this.logger.error(`Failed URL: ${url}`);
       return url; // Return original URL if download fails
     }
   }
