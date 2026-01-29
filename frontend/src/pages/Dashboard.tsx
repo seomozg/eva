@@ -91,21 +91,19 @@ const Dashboard = () => {
       // Create new girl via API
       const girlData = await chatAPI.createGirl();
 
-      // Convert API response to Girl format for localStorage
-      const newGirl = {
-        id: `temp-${Date.now()}`, // Temporary ID for localStorage
-        name: girlData.name,
-        appearance: girlData.appearance,
-        personality: girlData.personality,
-        avatarUrl: girlData.avatarUrl,
-        firstMessage: girlData.firstMessage, // Add first message
-        createdAt: new Date().toISOString(),
-      };
+      // Get the created girl from database to get real ID
+      const girls = await usersAPI.getGirls();
+      const newGirl = girls.find(g => g.name === girlData.name);
 
-      // Clear old chat messages and save new girl to localStorage
-      localStorage.removeItem('chatMessages');
-      localStorage.setItem('currentGirl', JSON.stringify(newGirl));
-      navigate('/chat');
+      if (newGirl) {
+        // Clear old chat messages and save new girl to localStorage
+        localStorage.removeItem('chatMessages');
+        localStorage.setItem('currentGirl', JSON.stringify(newGirl));
+        navigate(`/chat/${newGirl.id}`);
+      } else {
+        console.error('Could not find created girl in database');
+        navigate('/chat');
+      }
     } catch (error) {
       console.error('Error creating girl:', error);
       // Fallback to just navigating to chat
