@@ -212,8 +212,9 @@ export class ChatService {
         // For now, if it's a local URL, we can't provide external access
         // So we'll use the original URL if available, or skip the operation
         let fullImageUrl = baseImageUrl;
+        this.logger.log(`Base image URL received: ${baseImageUrl}`);
 
-        if (baseImageUrl.startsWith('/uploads/')) {
+        if (baseImageUrl && baseImageUrl.startsWith('/uploads/')) {
           // Local URL - external APIs can't access this in development
           // For development, you need to use ngrok or similar tunneling:
           // 1. Install ngrok: npm install -g ngrok
@@ -224,8 +225,10 @@ export class ChatService {
             : process.env.NGROK_URL || 'http://localhost:3000'; // Set NGROK_URL in .env
           fullImageUrl = `${baseUrl}${baseImageUrl}`;
 
-          this.logger.warn(`Using local image URL for external API: ${fullImageUrl}`);
+          this.logger.warn(`Converting local URL to full URL: ${fullImageUrl}`);
           this.logger.warn('Make sure your local server is accessible externally (use ngrok)');
+        } else {
+          this.logger.log(`Using external URL directly: ${fullImageUrl}`);
         }
 
         const createResponse = await firstValueFrom(

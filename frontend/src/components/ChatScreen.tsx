@@ -319,15 +319,24 @@ const ChatScreen = () => {
 
         // Check if the message contains references to existing images
         const lowerContent = content.toLowerCase();
-        if (lowerContent.includes('this') || lowerContent.includes('that') || lowerContent.includes('photo') || lowerContent.includes('image')) {
+        console.log('Checking for image references in:', lowerContent);
+        if (lowerContent.includes('this') || lowerContent.includes('that') || lowerContent.includes('photo') || lowerContent.includes('image') ||
+            lowerContent.includes('измени') || lowerContent.includes('сделай') || lowerContent.includes('картинк')) {
+          console.log('Found image reference keywords');
           // Look for the most recent image message from "her"
           const recentImageMessage = [...messages].reverse().find(msg =>
             msg.sender === 'her' && msg.type === 'image'
           );
+          console.log('Recent image message found:', recentImageMessage);
           if (recentImageMessage) {
             // Use original URL for external APIs if available
             baseImageUrl = recentImageMessage.originalMediaUrl || recentImageMessage.mediaUrl;
+            console.log('Using image URL for editing:', baseImageUrl);
+          } else {
+            console.log('No recent image message found');
           }
+        } else {
+          console.log('No image reference keywords found');
         }
 
         const result = await chatAPI.generateImage(content, baseImageUrl);
