@@ -313,7 +313,25 @@ const ChatScreen = () => {
       let originalVideoUrl: string | undefined;
 
       if (intent === 'image') {
-        const result = await chatAPI.generateImage(content, currentGirl?.avatarUrl);
+        // For image generation, check if user is referring to an existing image
+        let baseImageUrl = currentGirl?.avatarUrl;
+
+        // Check if the message contains references to existing images
+        const lowerContent = content.toLowerCase();
+        if (lowerContent.includes('this') || lowerContent.includes('that') || lowerContent.includes('photo') || lowerContent.includes('image')) {
+          // Look for the most recent image message from "her"
+          const recentImageMessage = [...messages].reverse().find(msg =>
+            msg.sender === 'her' && msg.type === 'image'
+          );
+          if (recentImageMessage) {
+            // Use original URL for external APIs if available
+            baseImageUrl = process.env.NODE_ENV === 'production'
+              ? recentImageMessage.mediaUrl
+              : recentImageMessage.mediaUrl; // In dev, mediaUrl is already original
+          }
+        }
+
+        const result = await chatAPI.generateImage(content, baseImageUrl);
         const { imageUrl } = result;
         originalImageUrl = result.originalImageUrl;
         if (imageUrl) {
