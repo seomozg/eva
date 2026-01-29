@@ -9,6 +9,8 @@ import { Transaction, TransactionType } from '../entities/transaction.entity';
 import { firstValueFrom, Observable, map } from 'rxjs';
 import { MessageEvent } from '@nestjs/common';
 import { APP_CONFIG } from '../config/app.config';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class ChatService {
@@ -737,6 +739,32 @@ export class ChatService {
         firstMessage: 'Hi there… I hope we can get to know each other better 💕',
         avatarUrl,
       };
+    }
+  }
+
+  private async downloadAndSaveFile(url: string, type: 'image' | 'video'): Promise<string> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, { responseType: 'arraybuffer' })
+      );
+
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${type === 'image' ? 'jpg' : 'mp4'}`;
+      const filePath = path.join(__dirname, '..', 'uploads', type === 'image' ? 'images' : 'videos', fileName);
+
+      // Ensure directory exists
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      // Save file
+      fs.writeFileSync(filePath, Buffer.from(response.data));
+
+      // Return local URL
+      return `/uploads/${type === 'image' ? 'images' : 'videos'}/${fileName}`;
+    } catch (error) {
+      this.logger.error(`Error downloading and saving ${type}:`, error);
+      return url; // Return original URL if download fails
     }
   }
 
