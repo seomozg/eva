@@ -379,6 +379,8 @@ const ChatScreen = () => {
           if (Date.now() - lastChunkTime > 2000) {
             clearTimeout(timeout);
             eventSource.close();
+            // Update status when streaming is complete
+            setStatus("Online");
           } else {
             setTimeout(checkComplete, 500);
           }
