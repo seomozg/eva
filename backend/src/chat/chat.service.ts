@@ -208,13 +208,24 @@ export class ChatService {
       }
 
       try {
-        // Convert local URLs to full URLs for RunPod
+        // For development, use ngrok or similar tunneling service
+        // For now, if it's a local URL, we can't provide external access
+        // So we'll use the original URL if available, or skip the operation
         let fullImageUrl = baseImageUrl;
+
         if (baseImageUrl.startsWith('/uploads/')) {
+          // Local URL - external APIs can't access this in development
+          // For development, you need to use ngrok or similar tunneling:
+          // 1. Install ngrok: npm install -g ngrok
+          // 2. Run: ngrok http 3000
+          // 3. Use the ngrok URL in the baseUrl below
           const baseUrl = process.env.NODE_ENV === 'production'
             ? 'http://eva.test-domain.ru'
-            : 'http://localhost:3000';
+            : process.env.NGROK_URL || 'http://localhost:3000'; // Set NGROK_URL in .env
           fullImageUrl = `${baseUrl}${baseImageUrl}`;
+
+          this.logger.warn(`Using local image URL for external API: ${fullImageUrl}`);
+          this.logger.warn('Make sure your local server is accessible externally (use ngrok)');
         }
 
         const createResponse = await firstValueFrom(
