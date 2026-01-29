@@ -46,6 +46,7 @@ npm install
 
 ### 5. Start Services
 
+#### Development (recommended for development)
 ```bash
 # Backend (from backend directory)
 npm run start:dev
@@ -53,6 +54,17 @@ npm run start:dev
 # Frontend (from frontend directory)
 npm run dev
 ```
+
+#### Production with Docker
+```bash
+# From project root
+docker-compose up --build
+```
+
+This will start:
+- PostgreSQL database on port 5432
+- Backend API on port 3000
+- Frontend on port 80
 
 ## Production Deployment
 
