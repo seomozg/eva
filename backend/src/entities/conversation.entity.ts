@@ -32,6 +32,9 @@ export class Conversation {
   mediaUrl: string;
 
   @Column({ nullable: true })
+  originalMediaUrl: string; // Original URL from external API
+
+  @Column({ nullable: true })
   mediaType: string; // 'image' | 'video'
 
   @CreateDateColumn()

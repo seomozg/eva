@@ -54,21 +54,21 @@ export const chatAPI = {
     const response = await api.post('/chat/detect-intent', { message });
     return response.data;
   },
-  generateImage: async (prompt: string, baseImageUrl?: string): Promise<{ imageUrl: string }> => {
+  generateImage: async (prompt: string, baseImageUrl?: string): Promise<{ imageUrl: string; originalImageUrl?: string }> => {
     const token = localStorage.getItem('token');
     const response = await api.post('/chat/generate-image', { prompt, baseImageUrl }, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     return response.data;
   },
-  generateVideo: async (prompt: string, baseImageUrl?: string): Promise<{ videoUrl: string }> => {
+  generateVideo: async (prompt: string, baseImageUrl?: string): Promise<{ videoUrl: string; originalVideoUrl?: string }> => {
     const token = localStorage.getItem('token');
     const response = await api.post('/chat/generate-video', { prompt, baseImageUrl }, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     return response.data;
   },
-  generateVideoFromImage: async (imageUrl: string, text: string): Promise<{ videoUrl: string }> => {
+  generateVideoFromImage: async (imageUrl: string, text: string): Promise<{ videoUrl: string; originalVideoUrl?: string }> => {
     const token = localStorage.getItem('token');
     const response = await api.post('/chat/generate-video-from-image', { imageUrl, text }, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -131,7 +131,7 @@ export const usersAPI = {
     const response = await api.get(`/users/conversations/${girlId}`);
     return response.data;
   },
-  saveMessage: async (girlId: string, messageData: { role: 'user' | 'assistant'; content: string; mediaUrl?: string; mediaType?: string }): Promise<any> => {
+  saveMessage: async (girlId: string, messageData: { role: 'user' | 'assistant'; content: string; mediaUrl?: string; mediaType?: string; originalMediaUrl?: string }): Promise<any> => {
     const response = await api.post(`/users/messages/${girlId}`, messageData);
     return response.data;
   },

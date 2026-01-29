@@ -154,7 +154,7 @@ export class UsersService {
     });
   }
 
-  async saveMessage(userId: string, girlId: string, role: 'user' | 'assistant', content: string, mediaUrl?: string, mediaType?: string): Promise<Conversation> {
+  async saveMessage(userId: string, girlId: string, role: 'user' | 'assistant', content: string, mediaUrl?: string, mediaType?: string, originalMediaUrl?: string): Promise<Conversation> {
     // Verify girl belongs to user
     const girl = await this.girlRepository.findOne({
       where: { id: girlId, userId },
@@ -170,6 +170,7 @@ export class UsersService {
       role: role === 'user' ? MessageRole.USER : MessageRole.ASSISTANT,
       content,
       mediaUrl,
+      originalMediaUrl,
       mediaType,
     });
 

@@ -163,9 +163,9 @@ const ChatScreen = () => {
                   type: msg.mediaType === 'image' ? 'image' : msg.mediaType === 'video' ? 'video' : 'text',
                   sender: msg.role === 'user' ? 'user' : 'her',
                   content: msg.content,
-                  mediaUrl: msg.mediaUrl,
+                  mediaUrl: process.env.NODE_ENV === 'production' ? msg.mediaUrl : (msg.originalMediaUrl || msg.mediaUrl),
                   mediaType: msg.mediaType,
-                  thumbnailUrl: msg.mediaType === 'video' ? msg.mediaUrl : undefined,
+                  thumbnailUrl: msg.mediaType === 'video' ? (process.env.NODE_ENV === 'production' ? msg.mediaUrl : (msg.originalMediaUrl || msg.mediaUrl)) : undefined,
                   timestamp: new Date(msg.createdAt),
                 }));
                 setMessages(messages);
@@ -264,12 +264,13 @@ const ChatScreen = () => {
     }
   };
 
-  const saveMessageToDatabase = async (girlId: string, message: Message) => {
+  const saveMessageToDatabase = async (girlId: string, message: Message, originalMediaUrl?: string) => {
     try {
       await usersAPI.saveMessage(girlId, {
         role: message.sender === 'user' ? 'user' : 'assistant',
         content: message.content,
         mediaUrl: message.mediaUrl,
+        originalMediaUrl,
         mediaType: message.type === 'image' ? 'image' : message.type === 'video' ? 'video' : undefined
       });
     } catch (error) {
@@ -308,9 +309,13 @@ const ChatScreen = () => {
       }
 
       let herMessage: Message;
+      let originalImageUrl: string | undefined;
+      let originalVideoUrl: string | undefined;
 
       if (intent === 'image') {
-        const { imageUrl } = await chatAPI.generateImage(content, currentGirl?.avatarUrl);
+        const result = await chatAPI.generateImage(content, currentGirl?.avatarUrl);
+        const { imageUrl } = result;
+        originalImageUrl = result.originalImageUrl;
         if (imageUrl) {
           herMessage = {
             id: (Date.now() + 1).toString(),
@@ -330,7 +335,9 @@ const ChatScreen = () => {
           };
         }
       } else if (intent === 'video') {
-        const { videoUrl } = await chatAPI.generateVideo(content, currentGirl?.avatarUrl);
+        const result = await chatAPI.generateVideo(content, currentGirl?.avatarUrl);
+        const { videoUrl } = result;
+        originalVideoUrl = result.originalVideoUrl;
         herMessage = {
           id: (Date.now() + 1).toString(),
           type: "video",
@@ -442,7 +449,7 @@ const ChatScreen = () => {
 
       // Save AI message to database
       if (currentGirl?.id) {
-        await saveMessageToDatabase(currentGirl.id, herMessage);
+        await saveMessageToDatabase(currentGirl.id, herMessage, intent === 'image' ? originalImageUrl : intent === 'video' ? originalVideoUrl : undefined);
       }
     } catch (error) {
       console.error('Error sending message:', error);

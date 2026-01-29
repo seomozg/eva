@@ -33,23 +33,23 @@ export class ChatController {
 
   @UseGuards(JwtAuthGuard)
   @Post('generate-image')
-  async generateImage(@Request() req, @Body('prompt') prompt: string, @Body('baseImageUrl') baseImageUrl?: string): Promise<{ imageUrl: string }> {
-    const imageUrl = await this.chatService.generateImage(prompt, baseImageUrl, req.user.id);
-    return { imageUrl };
+  async generateImage(@Request() req, @Body() body: { prompt: string; baseImageUrl?: string }) {
+    const imageUrl = await this.chatService.generateImage(body.prompt, body.baseImageUrl, req.user.id);
+    return { imageUrl, originalImageUrl: imageUrl.startsWith('/uploads/') ? undefined : imageUrl };
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('generate-video')
-  async generateVideo(@Request() req, @Body('prompt') prompt: string, @Body('baseImageUrl') baseImageUrl?: string): Promise<{ videoUrl: string }> {
-    const videoUrl = await this.chatService.generateVideo(prompt, baseImageUrl, req.user.id);
-    return { videoUrl };
+  async generateVideo(@Request() req, @Body() body: { prompt: string; baseImageUrl?: string }) {
+    const videoUrl = await this.chatService.generateVideo(body.prompt, body.baseImageUrl, req.user.id);
+    return { videoUrl, originalVideoUrl: videoUrl.startsWith('/uploads/') ? undefined : videoUrl };
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('generate-video-from-image')
-  async generateVideoFromImage(@Request() req, @Body('imageUrl') imageUrl: string, @Body('text') text: string): Promise<{ videoUrl: string }> {
-    const videoUrl = await this.chatService.generateVideoFromImage(imageUrl, text, req.user.id);
-    return { videoUrl };
+  async generateVideoFromImage(@Request() req, @Body() body: { imageUrl: string; text: string }) {
+    const videoUrl = await this.chatService.generateVideoFromImage(body.imageUrl, body.text, req.user.id);
+    return { videoUrl, originalVideoUrl: videoUrl.startsWith('/uploads/') ? undefined : videoUrl };
   }
 
   @Post('create-girl')

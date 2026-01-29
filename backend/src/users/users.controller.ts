@@ -58,8 +58,8 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Post('messages/:girlId')
-  saveMessage(@Request() req, @Param('girlId') girlId: string, @Body() messageData: { role: 'user' | 'assistant'; content: string; mediaUrl?: string; mediaType?: string }) {
-    return this.usersService.saveMessage(req.user.id, girlId, messageData.role, messageData.content, messageData.mediaUrl, messageData.mediaType);
+  saveMessage(@Request() req, @Param('girlId') girlId: string, @Body() messageData: { role: 'user' | 'assistant'; content: string; mediaUrl?: string; mediaType?: string; originalMediaUrl?: string }) {
+    return this.usersService.saveMessage(req.user.id, girlId, messageData.role, messageData.content, messageData.mediaUrl, messageData.mediaType, messageData.originalMediaUrl);
   }
 
   @UseGuards(JwtAuthGuard)
