@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { Girl } from '../entities/girl.entity';
-import { Conversation } from '../entities/conversation.entity';
+import { Conversation, MessageRole } from '../entities/conversation.entity';
 import { Transaction, TransactionType } from '../entities/transaction.entity';
 import { ChatService } from '../chat/chat.service';
 import { CreateGirlDto } from './dto/create-girl.dto';
@@ -139,6 +139,44 @@ export class UsersService {
   }
 
   async getConversations(userId: string, girlId: string): Promise<Conversation[]> {
+    // Verify girl belongs to user
+    const girl = await this.girlRepository.findOne({
+      where: { id: girlId, userId },
+    });
+
+    if (!girl) {
+      throw new NotFoundException('Girl not found');
+    }
+
+    return this.conversationRepository.find({
+      where: { userId, girlId },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async saveMessage(userId: string, girlId: string, role: 'user' | 'assistant', content: string, mediaUrl?: string, mediaType?: string): Promise<Conversation> {
+    // Verify girl belongs to user
+    const girl = await this.girlRepository.findOne({
+      where: { id: girlId, userId },
+    });
+
+    if (!girl) {
+      throw new NotFoundException('Girl not found');
+    }
+
+    const conversation = this.conversationRepository.create({
+      userId,
+      girlId,
+      role: role === 'user' ? MessageRole.USER : MessageRole.ASSISTANT,
+      content,
+      mediaUrl,
+      mediaType,
+    });
+
+    return this.conversationRepository.save(conversation);
+  }
+
+  async getMessages(userId: string, girlId: string): Promise<Conversation[]> {
     // Verify girl belongs to user
     const girl = await this.girlRepository.findOne({
       where: { id: girlId, userId },

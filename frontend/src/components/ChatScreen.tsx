@@ -145,56 +145,80 @@ const ChatScreen = () => {
         return;
       }
 
-      const loadGirl = () => {
+      const loadGirl = async () => {
         const savedGirl = localStorage.getItem('currentGirl');
         if (savedGirl) {
           try {
             const girl = JSON.parse(savedGirl);
             setCurrentGirl(girl);
 
-            // Use unique key for each girl's messages
-            const chatKey = `chatMessages_${girl.id || 'temp'}`;
-            const savedMessages = localStorage.getItem(chatKey);
+            // Load messages from database
+            try {
+              const dbMessages = await usersAPI.getMessages(girl.id);
 
-            if (savedMessages) {
-              const messages = JSON.parse(savedMessages).map((msg: any) => ({
-                ...msg,
-                timestamp: new Date(msg.timestamp),
-              }));
-              setMessages(messages);
-            } else {
-              // First time chatting with this girl - add avatar and first message
-              const initialMessages: Message[] = [];
+              if (dbMessages && dbMessages.length > 0) {
+                // Convert database messages to frontend format
+                const messages: Message[] = dbMessages.map((msg: any) => ({
+                  id: msg.id,
+                  type: msg.mediaType === 'image' ? 'image' : msg.mediaType === 'video' ? 'video' : 'text',
+                  sender: msg.role === 'user' ? 'user' : 'her',
+                  content: msg.content,
+                  mediaUrl: msg.mediaUrl,
+                  mediaType: msg.mediaType,
+                  thumbnailUrl: msg.mediaType === 'video' ? msg.mediaUrl : undefined,
+                  timestamp: new Date(msg.createdAt),
+                }));
+                setMessages(messages);
+              } else {
+                // First time chatting with this girl - add avatar and first message
+                const initialMessages: Message[] = [];
 
-              // Add avatar as first message if available
-              if (girl.avatarUrl) {
+                // Add avatar as first message if available
+                if (girl.avatarUrl) {
+                  initialMessages.push({
+                    id: `avatar_${Date.now()}`,
+                    type: "image",
+                    sender: "her",
+                    content: "Here's my photo! What do you think? 😊",
+                    mediaUrl: girl.avatarUrl,
+                    timestamp: new Date(Date.now() - 1000),
+                  });
+
+                  // Save avatar message to database
+                  await usersAPI.saveMessage(girl.id, {
+                    role: 'assistant',
+                    content: "Here's my photo! What do you think? 😊",
+                    mediaUrl: girl.avatarUrl,
+                    mediaType: 'image'
+                  });
+                }
+
+                // Add first message
+                const messageContent = girl.firstMessage || "Hi there! I'm so excited to meet you! 💕";
                 initialMessages.push({
-                  id: `avatar_${Date.now()}`,
-                  type: "image",
+                  id: `first_${Date.now()}`,
+                  type: "text",
                   sender: "her",
-                  content: "Here's my photo! What do you think? 😊",
-                  mediaUrl: girl.avatarUrl,
-                  timestamp: new Date(Date.now() - 1000),
+                  content: messageContent,
+                  timestamp: new Date(),
                 });
+
+                // Save first message to database
+                await usersAPI.saveMessage(girl.id, {
+                  role: 'assistant',
+                  content: messageContent
+                });
+
+                setMessages(initialMessages);
               }
-
-              // Add first message
-              const messageContent = girl.firstMessage || "Hi there! I'm so excited to meet you! 💕";
-              initialMessages.push({
-                id: `first_${Date.now()}`,
-                type: "text",
-                sender: "her",
-                content: messageContent,
-                timestamp: new Date(),
-              });
-
-              setMessages(initialMessages);
-              localStorage.setItem(chatKey, JSON.stringify(initialMessages));
+            } catch (error) {
+              console.error('Error loading messages from database:', error);
+              // Fallback to empty messages
+              setMessages([]);
             }
           } catch (error) {
             console.error('Error loading saved girl:', error);
             localStorage.removeItem('currentGirl');
-            localStorage.removeItem('chatMessages');
           }
         }
       };
@@ -240,10 +264,16 @@ const ChatScreen = () => {
     }
   };
 
-  const saveMessagesToStorage = (messages: Message[]) => {
-    if (currentGirl) {
-      const chatKey = `chatMessages_${currentGirl.id || 'temp'}`;
-      localStorage.setItem(chatKey, JSON.stringify(messages));
+  const saveMessageToDatabase = async (girlId: string, message: Message) => {
+    try {
+      await usersAPI.saveMessage(girlId, {
+        role: message.sender === 'user' ? 'user' : 'assistant',
+        content: message.content,
+        mediaUrl: message.mediaUrl,
+        mediaType: message.type === 'image' ? 'image' : message.type === 'video' ? 'video' : undefined
+      });
+    } catch (error) {
+      console.error('Error saving message to database:', error);
     }
   };
 
@@ -271,7 +301,11 @@ const ChatScreen = () => {
 
       updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages);
-      saveMessagesToStorage(updatedMessages);
+
+      // Save user message to database
+      if (currentGirl?.id) {
+        await saveMessageToDatabase(currentGirl.id, userMessage);
+      }
 
       let herMessage: Message;
 
@@ -344,10 +378,6 @@ const ChatScreen = () => {
           timestamp: new Date(),
         };
 
-        // Add empty message first
-        const tempMessages = [...updatedMessages, herMessage];
-        setMessages(tempMessages);
-
         // Stream the response
         const apiMessages = [systemPrompt, ...conversationHistory, { role: 'user' as const, content }];
         const streamUrl = process.env.NODE_ENV === 'production'
@@ -364,7 +394,9 @@ const ChatScreen = () => {
           const chunk = event.data;
           if (chunk) {
             herMessage.content += chunk;
-            setMessages([...tempMessages]); // Update UI
+            // Update UI with current content (but don't save to storage yet)
+            const tempMessages = [...updatedMessages, { ...herMessage }];
+            setMessages(tempMessages);
             lastChunkTime = Date.now();
           }
         };
@@ -372,26 +404,46 @@ const ChatScreen = () => {
         eventSource.onerror = () => {
           clearTimeout(timeout);
           eventSource.close();
+          // Save message even if there was an error
+          if (herMessage.content.trim() && currentGirl?.id) {
+            const finalMessages = [...updatedMessages, herMessage];
+            setMessages(finalMessages);
+            saveMessageToDatabase(currentGirl.id, herMessage);
+          }
         };
 
-        // Close after 2s of no chunks
+        // Close after 3s of no chunks (increased from 2s to be safer)
         const checkComplete = () => {
-          if (Date.now() - lastChunkTime > 2000) {
+          if (Date.now() - lastChunkTime > 3000) {
             clearTimeout(timeout);
             eventSource.close();
             // Update status when streaming is complete
             setStatus("Online");
+            // Save the completed message
+            if (herMessage.content.trim() && currentGirl?.id) {
+              const finalMessages = [...updatedMessages, herMessage];
+              setMessages(finalMessages);
+              saveMessageToDatabase(currentGirl.id, herMessage);
+            }
           } else {
             setTimeout(checkComplete, 500);
           }
         };
 
-        setTimeout(checkComplete, 2000);
+        setTimeout(checkComplete, 3000);
+
+        // For streaming, we don't add the message to finalMessages here
+        // It will be added when the stream completes
+        return;
       }
 
       const finalMessages = [...updatedMessages, herMessage];
       setMessages(finalMessages);
-      saveMessagesToStorage(finalMessages);
+
+      // Save AI message to database
+      if (currentGirl?.id) {
+        await saveMessageToDatabase(currentGirl.id, herMessage);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {
@@ -403,7 +455,11 @@ const ChatScreen = () => {
       };
       const finalMessages = [...updatedMessages, errorMessage];
       setMessages(finalMessages);
-      saveMessagesToStorage(finalMessages);
+
+      // Save error message to database
+      if (currentGirl?.id) {
+        await saveMessageToDatabase(currentGirl.id, errorMessage);
+      }
     } finally {
       setIsTyping(false);
       setStatus("Online");
@@ -434,9 +490,7 @@ const ChatScreen = () => {
       }
 
       // Generate flirtatious text using backend API
-      const prompt = `Generate a short, flirtatious message (max 15 words, about 4 seconds speaking time) that a girl would say to her boyfriend named ${userName}. The message MUST include the boyfriend's name "${userName}" at least once. Make it romantic and playful. Base it on this user message: "${contextMessage}"
-
-Response format: Just the message text, no quotes or explanations.`;
+      const prompt = `Generate a short, flirtatious message (max 15 words, about 4 seconds speaking time) that a girl would say to her boyfriend named ${userName}. The message MUST include the boyfriend's name "${userName}" at least once. Make it romantic and playful. Base it on this user message: "${contextMessage}"\n\nResponse format: Just the message text, no quotes or explanations.`;
 
       const textResponse = await chatAPI.sendMessage([
         { role: 'user', content: prompt }
@@ -459,7 +513,11 @@ Response format: Just the message text, no quotes or explanations.`;
 
         const updatedMessages = [...messages, videoMessage];
         setMessages(updatedMessages);
-        saveMessagesToStorage(updatedMessages);
+
+        // Save video message to database
+        if (currentGirl?.id) {
+          await saveMessageToDatabase(currentGirl.id, videoMessage);
+        }
       } else {
         throw new Error('Failed to generate video');
       }
@@ -474,7 +532,11 @@ Response format: Just the message text, no quotes or explanations.`;
       };
       const updatedMessages = [...messages, errorMessage];
       setMessages(updatedMessages);
-      saveMessagesToStorage(updatedMessages);
+
+      // Save error message to database
+      if (currentGirl?.id) {
+        await saveMessageToDatabase(currentGirl.id, errorMessage);
+      }
     } finally {
       setIsTyping(false);
       setStatus("Online");
@@ -494,14 +556,14 @@ Response format: Just the message text, no quotes or explanations.`;
         <div className="absolute top-20 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute bottom-40 right-0 w-60 h-60 rounded-full bg-lavender-mist/5 blur-3xl" />
       </div>
-      
+
       <ChatHeader
         name={currentGirl?.name || "Alina"}
         status={status}
         avatarUrl={currentGirl?.avatarUrl}
         onAvatarClick={() => setShowProfile(true)}
       />
-      
+
       {/* Messages area */}
       <main className="pt-20 pb-24 px-4 max-w-lg mx-auto">
         <div className="space-y-3 py-4">
@@ -513,15 +575,15 @@ Response format: Just the message text, no quotes or explanations.`;
               onCreateVideo={handleCreateVideo}
             />
           ))}
-          
+
           {isTyping && <TypingIndicator />}
-          
+
           <div ref={messagesEndRef} />
         </div>
       </main>
-      
+
       <ChatInput onSend={handleSendMessage} disabled={isTyping} />
-      
+
       <MiniProfile
         isOpen={showProfile}
         onClose={() => setShowProfile(false)}
@@ -530,7 +592,7 @@ Response format: Just the message text, no quotes or explanations.`;
         appearance={currentGirl?.appearance}
         avatarUrl={currentGirl?.avatarUrl}
       />
-      
+
       <MediaViewer
         isOpen={mediaViewer.isOpen}
         onClose={() => setMediaViewer(prev => ({ ...prev, isOpen: false }))}

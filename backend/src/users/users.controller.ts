@@ -55,4 +55,16 @@ export class UsersController {
   getConversations(@Request() req, @Param('girlId') girlId: string) {
     return this.usersService.getConversations(req.user.id, girlId);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('messages/:girlId')
+  saveMessage(@Request() req, @Param('girlId') girlId: string, @Body() messageData: { role: 'user' | 'assistant'; content: string; mediaUrl?: string; mediaType?: string }) {
+    return this.usersService.saveMessage(req.user.id, girlId, messageData.role, messageData.content, messageData.mediaUrl, messageData.mediaType);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('messages/:girlId')
+  getMessages(@Request() req, @Param('girlId') girlId: string) {
+    return this.usersService.getMessages(req.user.id, girlId);
+  }
 }

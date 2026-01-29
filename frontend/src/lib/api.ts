@@ -123,6 +123,14 @@ export const usersAPI = {
     const response = await api.get(`/users/conversations/${girlId}`);
     return response.data;
   },
+  saveMessage: async (girlId: string, messageData: { role: 'user' | 'assistant'; content: string; mediaUrl?: string; mediaType?: string }): Promise<any> => {
+    const response = await api.post(`/users/messages/${girlId}`, messageData);
+    return response.data;
+  },
+  getMessages: async (girlId: string): Promise<any[]> => {
+    const response = await api.get(`/users/messages/${girlId}`);
+    return response.data;
+  },
 };
 
 export default api;
