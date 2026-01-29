@@ -127,6 +127,24 @@ const ChatScreen = () => {
         return;
       }
 
+      // Verify token is still valid by checking profile
+      try {
+        await usersAPI.getProfile();
+      } catch (error: any) {
+        // Token is invalid or expired
+        localStorage.removeItem('token');
+        localStorage.removeItem('userProfile');
+        localStorage.removeItem('currentGirl');
+        // Clear all chat messages
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('chatMessages_')) {
+            localStorage.removeItem(key);
+          }
+        });
+        navigate('/login');
+        return;
+      }
+
       const loadGirl = () => {
         const savedGirl = localStorage.getItem('currentGirl');
         if (savedGirl) {

@@ -13,6 +13,28 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Handle 401 responses - token expired or invalid
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token is invalid or expired
+      localStorage.removeItem('token');
+      localStorage.removeItem('userProfile');
+      localStorage.removeItem('currentGirl');
+      // Clear all chat messages
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('chatMessages_')) {
+          localStorage.removeItem(key);
+        }
+      });
+      // Redirect to login
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const chatAPI = {
   sendMessage: async (messages: { role: 'user' | 'assistant' | 'system', content: string }[]): Promise<{ response: string }> => {
     const response = await api.post('/chat/send', { messages });

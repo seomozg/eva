@@ -74,8 +74,7 @@ const Dashboard = () => {
       localStorage.setItem('userProfile', JSON.stringify(userData));
     } catch (error) {
       console.error('Error loading dashboard data:', error);
-      // If not authenticated, redirect to login
-      navigate('/login');
+      // If not authenticated, redirect to login (handled by API interceptor)
     } finally {
       setIsLoading(false);
     }
