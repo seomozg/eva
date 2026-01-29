@@ -208,13 +208,22 @@ export class ChatService {
       }
 
       try {
+        // Convert local URLs to full URLs for RunPod
+        let fullImageUrl = baseImageUrl;
+        if (baseImageUrl.startsWith('/uploads/')) {
+          const baseUrl = process.env.NODE_ENV === 'production'
+            ? 'http://eva.test-domain.ru'
+            : 'http://localhost:3000';
+          fullImageUrl = `${baseUrl}${baseImageUrl}`;
+        }
+
         const createResponse = await firstValueFrom(
           this.httpService.post(
             'https://api.runpod.ai/v2/seedream-v4-edit/run',
             {
               input: {
                 prompt,
-                images: [baseImageUrl],
+                images: [fullImageUrl],
                 size: '2048*2048',
                 enable_safety_checker: false,
               },
@@ -407,10 +416,18 @@ export class ChatService {
 
     try {
       // Use provided image or generate one
-      const imageUrl = baseImageUrl || await this.generateImage(prompt);
+      let imageUrl = baseImageUrl || await this.generateImage(prompt);
       if (!imageUrl) {
         this.logger.error('No image available for video generation');
         return '';
+      }
+
+      // Convert local URLs to full URLs for Kie.ai
+      if (imageUrl.startsWith('/uploads/')) {
+        const baseUrl = process.env.NODE_ENV === 'production'
+          ? 'http://eva.test-domain.ru'
+          : 'http://localhost:3000';
+        imageUrl = `${baseUrl}${imageUrl}`;
       }
 
       this.logger.log('Sending request to Kie.ai API for video with wan2');
@@ -538,10 +555,19 @@ export class ChatService {
     }
 
     try {
+      // Convert local URLs to full URLs for Kie.ai
+      let fullImageUrl = imageUrl;
+      if (imageUrl.startsWith('/uploads/')) {
+        const baseUrl = process.env.NODE_ENV === 'production'
+          ? 'http://eva.test-domain.ru'
+          : 'http://localhost:3000';
+        fullImageUrl = `${baseUrl}${imageUrl}`;
+      }
+
       this.logger.log('Sending request to Kie.ai API for video from image with wan2');
       const inputData = {
         duration: APP_CONFIG.VIDEO.DURATION,
-        image_urls: [imageUrl],
+        image_urls: [fullImageUrl],
         multi_shots: APP_CONFIG.VIDEO.MULTI_SHOTS,
         prompt: `girl says: "${text}"`,
         resolution: APP_CONFIG.VIDEO.RESOLUTION
