@@ -38,6 +38,10 @@ export class AuthController {
       const result = await this.authService.googleLogin(req.user);
 
       // Return HTML page that saves token and redirects
+      const redirectUrl = process.env.NODE_ENV === 'production'
+        ? 'http://eva.test-domain.ru/chat'
+        : 'http://localhost:5173/chat';
+
       res.send(`
         <!DOCTYPE html>
         <html>
@@ -46,7 +50,7 @@ export class AuthController {
           <script>
             window.onload = function() {
               localStorage.setItem('token', '${result.access_token}');
-              window.location.href = 'http://eva.test-domain.ru/chat';
+              window.location.href = '${redirectUrl}';
             }
           </script>
         </head>
@@ -56,6 +60,10 @@ export class AuthController {
         </html>
       `);
     } catch (error) {
+      const loginUrl = process.env.NODE_ENV === 'production'
+        ? 'http://eva.test-domain.ru/login'
+        : 'http://localhost:5173/login';
+
       res.send(`
         <!DOCTYPE html>
         <html>
@@ -64,7 +72,7 @@ export class AuthController {
           <script>
             window.onload = function() {
               alert('Login failed');
-              window.location.href = 'http://eva.test-domain.ru/login';
+              window.location.href = '${loginUrl}';
             }
           </script>
         </head>

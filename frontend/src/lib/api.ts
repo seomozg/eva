@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://eva.test-domain.ru', // Production domain
+  baseURL: process.env.NODE_ENV === 'production'
+    ? 'http://eva.test-domain.ru'
+    : 'http://localhost:3000', // Development fallback
 });
 
 // Add JWT token to all requests
