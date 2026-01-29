@@ -767,7 +767,9 @@ export class ChatService {
       );
 
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${type === 'image' ? 'jpg' : 'mp4'}`;
-      const filePath = path.join(__dirname, '..', 'uploads', type === 'image' ? 'images' : 'videos', fileName);
+      // Use absolute path from project root for consistency
+      const projectRoot = path.join(__dirname, '..', '..');
+      const filePath = path.join(projectRoot, 'uploads', type === 'image' ? 'images' : 'videos', fileName);
 
       this.logger.log(`Saving ${type} to: ${filePath}`);
 
