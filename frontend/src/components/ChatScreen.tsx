@@ -167,6 +167,7 @@ const ChatScreen = () => {
                   mediaType: msg.mediaType,
                   thumbnailUrl: msg.mediaType === 'video' ? (process.env.NODE_ENV === 'production' ? msg.mediaUrl : (msg.originalMediaUrl || msg.mediaUrl)) : undefined,
                   timestamp: new Date(msg.createdAt),
+                  originalMediaUrl: msg.originalMediaUrl, // Store original URL for API calls
                 }));
                 setMessages(messages);
               } else {
@@ -325,9 +326,7 @@ const ChatScreen = () => {
           );
           if (recentImageMessage) {
             // Use original URL for external APIs if available
-            baseImageUrl = process.env.NODE_ENV === 'production'
-              ? recentImageMessage.mediaUrl
-              : recentImageMessage.mediaUrl; // In dev, mediaUrl is already original
+            baseImageUrl = recentImageMessage.originalMediaUrl || recentImageMessage.mediaUrl;
           }
         }
 

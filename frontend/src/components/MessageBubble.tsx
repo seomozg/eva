@@ -12,6 +12,7 @@ export interface Message {
   sender: 'user' | 'her';
   content: string;
   mediaUrl?: string;
+  originalMediaUrl?: string;
   thumbnailUrl?: string;
   timestamp?: Date;
 }
