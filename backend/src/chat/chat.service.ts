@@ -342,7 +342,12 @@ export class ChatService {
                   const result = JSON.parse(resultJson);
                   const imageUrl = result.resultUrls?.[0];
                   this.logger.log(`Image generated: ${imageUrl}`);
-                  return imageUrl || '';
+                  // Download and save locally
+                  if (imageUrl) {
+                    const localUrl = await this.downloadAndSaveFile(imageUrl, 'image');
+                    return localUrl;
+                  }
+                  return '';
                 } catch (parseError) {
                   this.logger.error('Failed to parse resultJson', parseError);
                   return '';
@@ -470,7 +475,12 @@ export class ChatService {
                 const result = JSON.parse(resultJson);
                 const videoUrl = result.resultUrls?.[0];
                 this.logger.log(`Video generated: ${videoUrl}`);
-                return videoUrl || '';
+                // Download and save locally
+                if (videoUrl) {
+                  const localUrl = await this.downloadAndSaveFile(videoUrl, 'video');
+                  return localUrl;
+                }
+                return '';
               } catch (parseError) {
                 this.logger.error('Failed to parse video resultJson', parseError);
                 return '';
@@ -590,7 +600,12 @@ export class ChatService {
                 const result = JSON.parse(resultJson);
                 const videoUrl = result.resultUrls?.[0];
                 this.logger.log(`Video from image generated: ${videoUrl}`);
-                return videoUrl || '';
+                // Download and save locally
+                if (videoUrl) {
+                  const localUrl = await this.downloadAndSaveFile(videoUrl, 'video');
+                  return localUrl;
+                }
+                return '';
               } catch (parseError) {
                 this.logger.error('Failed to parse video from image resultJson', parseError);
                 return '';
