@@ -22,6 +22,9 @@ export class Girl {
   @Column({ nullable: true })
   avatarUrl: string;
 
+  @Column({ nullable: true })
+  originalAvatarUrl: string; // Original URL from external API
+
   @Column({ default: true })
   isActive: boolean;
 

@@ -48,16 +48,17 @@ const MediaViewer = ({ isOpen, onClose, mediaUrl, type }: MediaViewerProps) => {
       </button>
       
       {/* Media content */}
-      <div 
-        className="max-w-[90vw] max-h-[90vh] relative"
+      <div
+        className="max-w-[90vw] max-h-[90vh] relative flex items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
         {type === "image" && (
-          <img
-            src={getImageUrl(mediaUrl)}
-            alt="Full size photo"
-            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-slide-up"
-          />
+        <img
+          src={mediaUrl.startsWith('http') ? mediaUrl : getImageUrl(mediaUrl)}
+          alt="Media content"
+          className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg shadow-2xl"
+          style={{ maxWidth: '90vw', maxHeight: '90vh' }}
+        />
         )}
 
         {type === "video" && (

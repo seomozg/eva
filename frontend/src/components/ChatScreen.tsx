@@ -16,6 +16,7 @@ interface Girl {
   appearance: string;
   personality: string;
   avatarUrl?: string;
+  originalAvatarUrl?: string;
   firstMessage?: string;
 }
 
@@ -152,6 +153,9 @@ const ChatScreen = () => {
             const girl = JSON.parse(savedGirl);
             setCurrentGirl(girl);
 
+            // Update document title with girl's name
+            document.title = `Chat with ${girl.name}`;
+
             // Load messages from database
             try {
               const dbMessages = await usersAPI.getMessages(girl.id);
@@ -165,7 +169,7 @@ const ChatScreen = () => {
                   content: msg.content,
                   mediaUrl: process.env.NODE_ENV === 'production' ? msg.mediaUrl : (msg.originalMediaUrl || msg.mediaUrl),
                   mediaType: msg.mediaType,
-                  thumbnailUrl: msg.mediaType === 'video' ? (process.env.NODE_ENV === 'production' ? msg.mediaUrl : (msg.originalMediaUrl || msg.mediaUrl)) : undefined,
+                  thumbnailUrl: msg.thumbnailUrl ? (msg.thumbnailUrl.startsWith('http') ? msg.thumbnailUrl : getImageUrl(msg.thumbnailUrl)) : undefined,
                   timestamp: new Date(msg.createdAt),
                   originalMediaUrl: msg.originalMediaUrl, // Store original URL for API calls
                 }));
@@ -190,6 +194,7 @@ const ChatScreen = () => {
                     role: 'assistant',
                     content: "Here's my photo! What do you think? 😊",
                     mediaUrl: girl.avatarUrl,
+                    originalMediaUrl: girl.originalAvatarUrl,
                     mediaType: 'image'
                   });
                 }
@@ -265,13 +270,14 @@ const ChatScreen = () => {
     }
   };
 
-  const saveMessageToDatabase = async (girlId: string, message: Message, originalMediaUrl?: string) => {
+  const saveMessageToDatabase = async (girlId: string, message: Message, originalMediaUrl?: string, thumbnailUrl?: string) => {
     try {
       await usersAPI.saveMessage(girlId, {
         role: message.sender === 'user' ? 'user' : 'assistant',
         content: message.content,
         mediaUrl: message.mediaUrl,
         originalMediaUrl,
+        thumbnailUrl,
         mediaType: message.type === 'image' ? 'image' : message.type === 'video' ? 'video' : undefined
       });
     } catch (error) {
@@ -314,29 +320,21 @@ const ChatScreen = () => {
       let originalVideoUrl: string | undefined;
 
       if (intent === 'image') {
-        // For image generation, check if user is referring to an existing image
-        let baseImageUrl = currentGirl?.avatarUrl;
+        // Priority: girl's avatar > recent image from chat
+        let baseImageUrl = currentGirl?.originalAvatarUrl || currentGirl?.avatarUrl;
 
-        // Check if the message contains references to existing images
-        const lowerContent = content.toLowerCase();
-        console.log('Checking for image references in:', lowerContent);
-        if (lowerContent.includes('this') || lowerContent.includes('that') || lowerContent.includes('photo') || lowerContent.includes('image') ||
-            lowerContent.includes('измени') || lowerContent.includes('сделай') || lowerContent.includes('картинк')) {
-          console.log('Found image reference keywords');
-          // Look for the most recent image message from "her"
+        // If no avatar available, try to use the most recent image from chat
+        if (!baseImageUrl) {
           const recentImageMessage = [...messages].reverse().find(msg =>
             msg.sender === 'her' && msg.type === 'image'
           );
-          console.log('Recent image message found:', recentImageMessage);
+
           if (recentImageMessage) {
-            // Use original URL for external APIs if available
             baseImageUrl = recentImageMessage.originalMediaUrl || recentImageMessage.mediaUrl;
-            console.log('Using image URL for editing:', baseImageUrl);
-          } else {
-            console.log('No recent image message found');
+            console.log('Using recent image for editing:', baseImageUrl);
           }
         } else {
-          console.log('No image reference keywords found');
+          console.log('Using girl avatar for editing:', baseImageUrl);
         }
 
         const result = await chatAPI.generateImage(content, baseImageUrl);
@@ -530,8 +528,13 @@ const ChatScreen = () => {
       ]);
       const flirtText = textResponse.response.trim();
 
+      // Find the original URL of the image for external API
+      const imageMessage = messages.find(msg => msg.mediaUrl === imageUrl && msg.type === 'image');
+      const originalImageUrl = imageMessage?.originalMediaUrl || imageUrl;
+      console.log('Creating video from image:', { imageUrl, originalImageUrl, imageMessage });
+
       // Create video with the image and flirt text
-      const { videoUrl } = await chatAPI.generateVideoFromImage(imageUrl, flirtText);
+      const { videoUrl } = await chatAPI.generateVideoFromImage(originalImageUrl, flirtText);
 
       if (videoUrl) {
         const videoMessage: Message = {
@@ -549,7 +552,7 @@ const ChatScreen = () => {
 
         // Save video message to database
         if (currentGirl?.id) {
-          await saveMessageToDatabase(currentGirl.id, videoMessage);
+          await saveMessageToDatabase(currentGirl.id, videoMessage, undefined, videoMessage.thumbnailUrl);
         }
       } else {
         throw new Error('Failed to generate video');

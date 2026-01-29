@@ -35,6 +35,9 @@ export class Conversation {
   originalMediaUrl: string; // Original URL from external API
 
   @Column({ nullable: true })
+  thumbnailUrl: string; // Thumbnail URL for videos
+
+  @Column({ nullable: true })
   mediaType: string; // 'image' | 'video'
 
   @CreateDateColumn()

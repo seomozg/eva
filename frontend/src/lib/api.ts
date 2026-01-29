@@ -131,7 +131,7 @@ export const usersAPI = {
     const response = await api.get(`/users/conversations/${girlId}`);
     return response.data;
   },
-  saveMessage: async (girlId: string, messageData: { role: 'user' | 'assistant'; content: string; mediaUrl?: string; mediaType?: string; originalMediaUrl?: string }): Promise<any> => {
+  saveMessage: async (girlId: string, messageData: { role: 'user' | 'assistant'; content: string; mediaUrl?: string; mediaType?: string; originalMediaUrl?: string; thumbnailUrl?: string }): Promise<any> => {
     const response = await api.post(`/users/messages/${girlId}`, messageData);
     return response.data;
   },

@@ -733,26 +733,87 @@ export class ChatService {
         const appearance = parsed.appearance;
         const name = this.generateRandomFemaleName();
         this.logger.log(`Generating avatar for girl: ${name} with appearance: ${appearance}`);
-        const avatarUrl = await this.generateImage(`${appearance}, in bikini`, undefined, userId, true);
-        this.logger.log(`Generated avatar URL: ${avatarUrl}`);
 
-        // Save girl to database
-        const girl = this.girlRepository.create({
-          userId,
-          name,
-          appearance,
-          personality: Array.isArray(parsed.personality) ? parsed.personality.join(', ') : parsed.personality,
-          avatarUrl,
-        });
-        await this.girlRepository.save(girl);
+        // Generate image directly for avatar (skip balance check)
+        const apiKey = this.configService.get<string>('KIE_API_KEY');
+        if (!apiKey || apiKey === 'your_kie_api_key_here') {
+          this.logger.warn('Kie.ai API key not set, cannot generate avatar');
+          throw new Error('Kie.ai API key not configured');
+        }
 
-        return {
-          name,
-          appearance,
-          personality: Array.isArray(parsed.personality) ? parsed.personality.join(', ') : parsed.personality,
-          firstMessage: parsed.firstMessage,
-          avatarUrl,
+        const requestData = {
+          model: 'z-image',
+          input: {
+            prompt: `${appearance}, beautiful girl, portrait, high quality, in bikini`,
+            aspect_ratio: '1:1',
+          },
         };
+
+        const createResponse = await firstValueFrom(
+          this.httpService.post(
+            'https://api.kie.ai/api/v1/jobs/createTask',
+            requestData,
+            {
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+            },
+          ),
+        );
+
+        const recordId = createResponse.data.data?.recordId;
+        if (!recordId) {
+          throw new Error('No recordId found in avatar generation response');
+        }
+
+        // Poll for completion
+        const maxPolls = 20;
+        const pollInterval = 3000;
+
+        for (let i = 0; i < maxPolls; i++) {
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+          const statusResponse = await firstValueFrom(
+            this.httpService.get(`https://api.kie.ai/api/v1/jobs/recordInfo`, {
+              params: { taskId: recordId },
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+              },
+            }),
+          );
+
+          const taskState = statusResponse.data.data?.state;
+          if (taskState === 'success') {
+            const resultJson = statusResponse.data.data?.resultJson;
+            const result = JSON.parse(resultJson);
+            const originalAvatarUrl = result.resultUrls?.[0];
+
+            // Download and save locally
+            const avatarUrl = await this.downloadAndSaveFile(originalAvatarUrl, 'image');
+            this.logger.log(`Generated avatar - Local: ${avatarUrl}, Original: ${originalAvatarUrl}`);
+
+            // Save girl to database
+            const girl = this.girlRepository.create({
+              userId,
+              name,
+              appearance,
+              personality: Array.isArray(parsed.personality) ? parsed.personality.join(', ') : parsed.personality,
+              avatarUrl,
+              originalAvatarUrl,
+            });
+            await this.girlRepository.save(girl);
+
+            return {
+              name,
+              appearance,
+              personality: Array.isArray(parsed.personality) ? parsed.personality.join(', ') : parsed.personality,
+              firstMessage: parsed.firstMessage,
+              avatarUrl,
+            };
+          }
+        }
+        throw new Error('Avatar generation timeout');
       } catch (parseError) {
         this.logger.error('Failed to parse JSON from DeepSeek response, using fallback', parseError);
         const fallbackAppearance = 'Beautiful girl with long brown hair and blue eyes';

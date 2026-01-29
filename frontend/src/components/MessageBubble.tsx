@@ -62,7 +62,7 @@ const MessageBubble = ({ message, onMediaClick, onCreateVideo }: MessageBubblePr
               className="block"
             >
               <img
-                src={message.mediaUrl ? getImageUrl(message.mediaUrl) : undefined}
+                src={message.mediaUrl ? (message.mediaUrl.startsWith('http') ? message.mediaUrl : getImageUrl(message.mediaUrl)) : undefined}
                 alt="Shared photo"
                 className="w-full max-w-[240px] rounded-xl object-cover transition-transform group-hover:scale-[1.02]"
               />
@@ -87,7 +87,7 @@ const MessageBubble = ({ message, onMediaClick, onCreateVideo }: MessageBubblePr
             className="block relative group"
           >
             <img
-              src={message.thumbnailUrl ? getImageUrl(message.thumbnailUrl) : videoThumbnail}
+              src={message.thumbnailUrl ? (message.thumbnailUrl.startsWith('http') ? message.thumbnailUrl : getImageUrl(message.thumbnailUrl)) : videoThumbnail}
               alt="Video thumbnail"
               className="w-[240px] h-[240px] rounded-xl object-cover"
             />

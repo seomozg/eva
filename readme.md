@@ -24,11 +24,16 @@ cp .env.example .env
 
 ### 3. Database Setup
 
+The application uses PostgreSQL with Docker. The database is automatically created when you run `docker-compose up`.
+
+For local development without Docker:
+
 ```bash
 # Install PostgreSQL and create database
 createdb eva_db
 
-# Run migrations
+# Run TypeORM migrations (if needed)
+cd backend
 npm run migration:run
 ```
 

@@ -91,6 +91,7 @@ export class UsersService {
     return this.girlRepository.find({
       where: { userId, isActive: true },
       order: { createdAt: 'DESC' },
+      select: ['id', 'name', 'appearance', 'personality', 'avatarUrl', 'originalAvatarUrl', 'createdAt'], // Include originalAvatarUrl
     });
   }
 
@@ -114,8 +115,18 @@ export class UsersService {
     if (updateData.personality !== undefined) {
       girl.personality = updateData.personality;
     }
-    if (updateData.avatarUrl !== undefined) {
+
+    // If avatar is being updated, send a message to chat
+    if (updateData.avatarUrl !== undefined && updateData.avatarUrl !== girl.avatarUrl) {
       girl.avatarUrl = updateData.avatarUrl;
+
+      // Save the girl first
+      await this.girlRepository.save(girl);
+
+      // Send message to chat with new avatar
+      await this.saveMessage(userId, girlId, 'assistant', "Here's my new look! What do you think? 💕", updateData.avatarUrl, 'image');
+
+      return girl;
     }
 
     return this.girlRepository.save(girl);
@@ -154,7 +165,7 @@ export class UsersService {
     });
   }
 
-  async saveMessage(userId: string, girlId: string, role: 'user' | 'assistant', content: string, mediaUrl?: string, mediaType?: string, originalMediaUrl?: string): Promise<Conversation> {
+  async saveMessage(userId: string, girlId: string, role: 'user' | 'assistant', content: string, mediaUrl?: string, mediaType?: string, originalMediaUrl?: string, thumbnailUrl?: string): Promise<Conversation> {
     // Verify girl belongs to user
     const girl = await this.girlRepository.findOne({
       where: { id: girlId, userId },
@@ -171,6 +182,7 @@ export class UsersService {
       content,
       mediaUrl,
       originalMediaUrl,
+      thumbnailUrl,
       mediaType,
     });
 
@@ -190,6 +202,7 @@ export class UsersService {
     return this.conversationRepository.find({
       where: { userId, girlId },
       order: { createdAt: 'ASC' },
+      select: ['id', 'userId', 'girlId', 'role', 'content', 'mediaUrl', 'originalMediaUrl', 'thumbnailUrl', 'mediaType', 'createdAt'], // Include thumbnailUrl
     });
   }
 

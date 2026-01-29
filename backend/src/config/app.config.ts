@@ -23,24 +23,30 @@ export const APP_CONFIG = {
 
   // Prompts
   PROMPTS: {
-    GIRL_GENERATION: `Generate a description of a girl's appearance. RANDOMLY select one option from each category below:
-1. Appearance
-Hair length: long, short, bob, shoulder-length
-Hair color: blonde, brunette, redhead, black
-Ethnicity/appearance type: European, Asian, mixed-race (mulatto), Latina
-Body type: slim, athletic, petite
-Breast size: small, medium, large
-Add Personality
-2. Personality traits (2-4 adjectives)
-Add First Message
-3. First chat message she would send to introduce herself
+    GIRL_GENERATION: `Generate a COMPLETELY RANDOM and UNIQUE girl description. Use this random seed: ${Date.now()}-${Math.random()}.
 
-Format as JSON:
+CRITICALLY IMPORTANT: You MUST randomly select EXACTLY ONE option from each category below. Do NOT favor any ethnicity or type - make truly random choices:
+
+1. Hair length: [long, short, bob, shoulder-length, pixie, braided, curly long]
+2. Hair color: [blonde, brunette, redhead, black, platinum blonde, ash brown, chestnut, jet black, strawberry blonde]
+3. Ethnicity/appearance type: [European, Asian, African, mixed-race (mulatto), Latina, Middle Eastern, Scandinavian, Mediterranean, Slavic, Nordic, Pacific Islander, Native American]
+4. Body type: [slim, athletic, petite, curvy, hourglass, toned, fit]
+5. Breast size: [small, medium, large, petite, full]
+6. Eye color: [blue, brown, green, hazel, gray, amber, violet]
+7. Skin tone: [fair, medium, olive, tan, dark]
+
+2. Personality traits: Choose 3-5 COMPLETELY RANDOM adjectives from: [shy, confident, witty, sarcastic, sweet, adventurous, intellectual, artistic, athletic, mysterious, bubbly, reserved, passionate, gentle, fierce, playful, ambitious, compassionate, bold, delicate, energetic, calm, charismatic, thoughtful, spontaneous]
+
+3. First chat message: Create a unique, personalized introduction message (1-2 sentences)
+
+Format as VALID JSON:
 {
-  "appearance": "description",
-  "personality": "traits",
-  "firstMessage": "message"
-}`,
+  "appearance": "Detailed physical description using random selections above",
+  "personality": "comma-separated personality traits",
+  "firstMessage": "unique introduction message"
+}
+
+Remember: Each generation must be completely unique and random!`,
 
     INTENT_DETECTION: `Analyze this user message and determine the intent. Respond with ONLY ONE word: text, image, or video.
 
