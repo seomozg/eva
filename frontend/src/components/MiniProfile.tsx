@@ -1,5 +1,6 @@
 import { X, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getImageUrl } from "@/lib/api";
 import avatarAlina from "@/assets/avatar-alina.jpg";
 
 interface MiniProfileProps {
@@ -54,7 +55,7 @@ const MiniProfile = ({ isOpen, onClose, name, personality, appearance, avatarUrl
             {/* Avatar */}
             <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-primary/20 ring-offset-4 ring-offset-card mb-4 shadow-glow">
               <img
-                src={avatarUrl ? avatarUrl : avatarAlina}
+                src={avatarUrl ? getImageUrl(avatarUrl) : avatarAlina}
                 alt={name}
                 className="w-full h-full object-cover"
                 onError={(e) => {

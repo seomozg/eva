@@ -6,7 +6,7 @@ import TypingIndicator from "@/components/TypingIndicator";
 import ChatInput from "@/components/ChatInput";
 import MiniProfile from "@/components/MiniProfile";
 import MediaViewer from "@/components/MediaViewer";
-import { chatAPI, usersAPI } from "@/lib/api";
+import { chatAPI, usersAPI, getImageUrl } from "@/lib/api";
 import photoSelfie from "@/assets/photo-selfie.jpg";
 import videoThumbnail from "@/assets/video-thumbnail.jpg";
 

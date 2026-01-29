@@ -37,6 +37,14 @@ api.interceptors.response.use(
   }
 );
 
+// Helper function to get correct image URL
+export const getImageUrl = (path: string): string => {
+  if (process.env.NODE_ENV === 'production') {
+    return `http://eva.test-domain.ru${path}`;
+  }
+  return `http://localhost:3000${path}`;
+};
+
 export const chatAPI = {
   sendMessage: async (messages: { role: 'user' | 'assistant' | 'system', content: string }[]): Promise<{ response: string }> => {
     const response = await api.post('/chat/send', { messages });

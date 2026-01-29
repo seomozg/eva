@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, CreditCard, Users, MessageCircle, LogOut, Plus, Edit, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { usersAPI, chatAPI } from "@/lib/api";
+import { usersAPI, chatAPI, getImageUrl } from "@/lib/api";
 
 interface User {
   id: string;
@@ -292,7 +292,7 @@ const Dashboard = () => {
                       <CardHeader>
                         <div className="flex items-center space-x-4">
                           <Avatar className="w-12 h-12">
-                            <AvatarImage src={girl.avatarUrl} />
+                            <AvatarImage src={girl.avatarUrl ? getImageUrl(girl.avatarUrl) : undefined} />
                             <AvatarFallback>{girl.name[0]}</AvatarFallback>
                           </Avatar>
                           <div>

@@ -1,5 +1,6 @@
 import { Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getImageUrl } from "@/lib/api";
 import avatarAlina from "@/assets/avatar-alina.jpg";
 
 interface ChatHeaderProps {
@@ -23,7 +24,7 @@ const ChatHeader = ({ name, status, avatarUrl, onAvatarClick }: ChatHeaderProps)
         >
           <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-primary/30 ring-offset-2 ring-offset-background transition-all group-hover:ring-primary/60">
             <img
-              src={avatarUrl || avatarAlina}
+              src={avatarUrl ? getImageUrl(avatarUrl) : avatarAlina}
               alt={name}
               className="w-full h-full object-cover"
               onError={(e) => {

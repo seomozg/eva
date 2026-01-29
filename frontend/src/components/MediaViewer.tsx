@@ -1,6 +1,7 @@
 import { X, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MessageType } from "@/components/MessageBubble";
+import { getImageUrl } from "@/lib/api";
 import { useEffect, useCallback } from "react";
 
 interface MediaViewerProps {
@@ -53,16 +54,16 @@ const MediaViewer = ({ isOpen, onClose, mediaUrl, type }: MediaViewerProps) => {
       >
         {type === "image" && (
           <img
-            src={mediaUrl}
+            src={getImageUrl(mediaUrl)}
             alt="Full size photo"
             className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-slide-up"
           />
         )}
-        
+
         {type === "video" && (
           <div className="relative group">
             <video
-              src={mediaUrl}
+              src={getImageUrl(mediaUrl)}
               controls
               className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-slide-up"
               poster="" // Optional: can add thumbnail later
