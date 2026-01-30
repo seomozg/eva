@@ -82,11 +82,16 @@ const Dashboard = () => {
 
   const loadDashboardData = async () => {
     try {
+      console.log('Loading dashboard data...');
       const [userData, balanceData, girlsData] = await Promise.all([
         usersAPI.getProfile(),
         usersAPI.getBalance(),
         usersAPI.getGirls()
       ]);
+
+      console.log('User data:', userData);
+      console.log('Balance data:', balanceData);
+      console.log('Girls data:', girlsData);
 
       setUser(userData);
       setBalance(balanceData);
