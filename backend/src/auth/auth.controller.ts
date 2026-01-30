@@ -41,7 +41,7 @@ export class AuthController {
 
       // Return HTML page that saves token and redirects
       const redirectUrl = process.env.NODE_ENV === 'production'
-        ? 'http://eva.test-domain.ru/chat'
+        ? 'https://eva.test-domain.ru/chat'
         : 'http://localhost:5173/chat';
 
       res.send(`
@@ -63,7 +63,7 @@ export class AuthController {
       `);
     } catch (error) {
       const loginUrl = process.env.NODE_ENV === 'production'
-        ? 'http://eva.test-domain.ru/login'
+        ? 'https://eva.test-domain.ru/login'
         : 'http://localhost:5173/login';
 
       res.send(`
