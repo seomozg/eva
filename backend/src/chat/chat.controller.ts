@@ -52,8 +52,8 @@ export class ChatController {
     return { videoUrl, originalVideoUrl: videoUrl.startsWith('/uploads/') ? undefined : videoUrl };
   }
 
-  @Post('create-girl')
   @UseGuards(JwtAuthGuard)
+  @Post('create-girl')
   async createGirl(@Request() req) {
     const userId = req.user.id;
     return await this.chatService.createGirl(userId);
