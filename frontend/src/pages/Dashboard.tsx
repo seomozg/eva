@@ -83,6 +83,8 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       console.log('Loading dashboard data...');
+      console.log('Token exists:', !!localStorage.getItem('token'));
+
       const [userData, balanceData, girlsData] = await Promise.all([
         usersAPI.getProfile(),
         usersAPI.getBalance(),
