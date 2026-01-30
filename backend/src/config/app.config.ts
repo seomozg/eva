@@ -23,31 +23,6 @@ export const APP_CONFIG = {
 
   // Prompts
   PROMPTS: {
-    GIRL_GENERATION: `Generate a COMPLETELY RANDOM and UNIQUE girl description. Use this random seed: ${Date.now()}-${Math.random()}.
-
-CRITICALLY IMPORTANT: You MUST randomly select EXACTLY ONE option from each category below. Do NOT favor any ethnicity or type - make truly random choices:
-
-1. Hair length: [long, short, bob, shoulder-length, pixie, braided, curly long]
-2. Hair color: [blonde, brunette, redhead, black, platinum blonde, ash brown, chestnut, jet black, strawberry blonde]
-3. Ethnicity/appearance type: [European, Asian, African, mixed-race (mulatto), Latina, Middle Eastern, Scandinavian, Mediterranean, Slavic, Nordic, Pacific Islander, Native American]
-4. Body type: [slim, athletic, petite, curvy, hourglass, toned, fit]
-5. Breast size: [small, medium, large, petite, full]
-6. Eye color: [blue, brown, green, hazel, gray, amber, violet]
-7. Skin tone: [fair, medium, olive, tan, dark]
-
-2. Personality traits: Choose 3-5 COMPLETELY RANDOM adjectives from: [shy, confident, witty, sarcastic, sweet, adventurous, intellectual, artistic, athletic, mysterious, bubbly, reserved, passionate, gentle, fierce, playful, ambitious, compassionate, bold, delicate, energetic, calm, charismatic, thoughtful, spontaneous]
-
-3. First chat message: Create a unique, personalized introduction message (1-2 sentences)
-
-Format as VALID JSON:
-{
-  "appearance": "Detailed physical description using random selections above",
-  "personality": "comma-separated personality traits",
-  "firstMessage": "unique introduction message"
-}
-
-Remember: Each generation must be completely unique and random!`,
-
     INTENT_DETECTION: `Analyze this user message and determine the intent. Respond with ONLY ONE word: text, image, or video.
 
 Message: "{message}"
@@ -67,6 +42,29 @@ Response format: Just the message text, no quotes or explanations.`,
     'Natalie', 'Leah', 'Zoe', 'Brooklyn', 'Savannah', 'Audrey', 'Claire', 'Bella', 'Skylar', 'Lucy',
     'Anna', 'Samantha', 'Caroline', 'Genesis', 'Aaliyah', 'Kennedy', 'Allison', 'Gabriella', 'Madelyn', 'Maya'
   ],
+
+  // Random girl generation parameters
+  GIRL_GENERATION_PARAMS: {
+    HAIR_LENGTH: ['long', 'short', 'bob', 'shoulder-length', 'pixie', 'braided', 'curly long'],
+    HAIR_COLOR: ['blonde', 'brunette', 'redhead', 'black', 'platinum blonde', 'ash brown', 'chestnut', 'jet black', 'strawberry blonde'],
+    ETHNICITY: ['European', 'Asian', 'African', 'mixed-race (mulatto)', 'Latina', 'Middle Eastern', 'Scandinavian', 'Mediterranean', 'Slavic', 'Nordic', 'Pacific Islander', 'Native American'],
+    BODY_TYPE: ['slim', 'athletic', 'petite', 'curvy', 'hourglass', 'toned', 'fit'],
+    BREAST_SIZE: ['small', 'medium', 'large', 'petite', 'full'],
+    SKIN_TONE: ['fair', 'medium', 'olive', 'tan', 'dark'],
+    PERSONALITY_TRAITS: ['shy', 'confident', 'witty', 'sarcastic', 'sweet', 'adventurous', 'intellectual', 'artistic', 'athletic', 'mysterious', 'bubbly', 'reserved', 'passionate', 'gentle', 'fierce', 'playful', 'ambitious', 'compassionate', 'bold', 'delicate', 'energetic', 'calm', 'charismatic', 'thoughtful', 'spontaneous'],
+    FIRST_MESSAGES: [
+      "Hi there! I've been waiting to meet someone special like you 💕",
+      "Hello! You look like someone I could really connect with 😊",
+      "Hey! I hope you're having a great day. Want to chat? 🌟",
+      "Hi! I'm so excited to get to know you better! 💫",
+      "Hello there! You seem really interesting. Tell me about yourself! ✨",
+      "Hey! I've been thinking about finding someone to talk to. Glad it's you! 💕",
+      "Hi! You have such a warm smile. What's your story? 😊",
+      "Hello! I'm really looking forward to our conversation! 🌸",
+      "Hey there! You caught my eye. Let's get to know each other! 💫",
+      "Hi! I'm so glad we matched. You seem amazing! ✨"
+    ]
+  },
 
   // API timeouts and limits
   API: {

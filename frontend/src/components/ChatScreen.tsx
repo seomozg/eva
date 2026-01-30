@@ -475,13 +475,17 @@ const ChatScreen = () => {
       if (currentGirl?.id) {
         await saveMessageToDatabase(currentGirl.id, herMessage, intent === 'image' ? originalImageUrl : intent === 'video' ? originalVideoUrl : undefined);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
+
+      // Just show the backend error message directly
+      const errorContent = error.response?.data?.message || error.message || "Sorry, something went wrong... 😔";
+
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "text",
         sender: "her",
-        content: "Sorry, something went wrong... 😔",
+        content: errorContent,
         timestamp: new Date(),
       };
       const finalMessages = [...updatedMessages, errorMessage];
@@ -557,13 +561,17 @@ const ChatScreen = () => {
       } else {
         throw new Error('Failed to generate video');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating video:', error);
+
+      // Just show the backend error message directly
+      const errorContent = error.response?.data?.message || error.message || "Sorry, I couldn't create the video right now... 😔";
+
       const errorMessage: Message = {
         id: Date.now().toString(),
         type: "text",
         sender: "her",
-        content: "Sorry, I couldn't create the video right now... 😔",
+        content: errorContent,
         timestamp: new Date(),
       };
       const updatedMessages = [...messages, errorMessage];

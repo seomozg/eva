@@ -46,6 +46,16 @@ const Dashboard = () => {
   const [balance, setBalance] = useState<{ balance: number; transactions: Transaction[] }>({ balance: 0, transactions: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingGirl, setIsCreatingGirl] = useState(false);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
+  // Images for the slideshow during girl creation
+  const slideshowImages = [
+    '/uploads/images/1769683970567-eyw89.jpg',
+    '/uploads/images/1769682079627-t35sx.jpg',
+    '/uploads/images/1769683043479-iefl2.jpg',
+    '/uploads/images/1769683648969-kxwcoy.jpg',
+    '/uploads/images/1769686499071-on9vmn.jpg',
+  ];
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [editedFirstName, setEditedFirstName] = useState('');
   const [editingGirl, setEditingGirl] = useState<Girl | null>(null);
@@ -56,6 +66,19 @@ const Dashboard = () => {
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Slideshow effect during girl creation
+  useEffect(() => {
+    if (isCreatingGirl && slideshowImages.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentSlideIndex((prev) => (prev + 1) % slideshowImages.length);
+      }, 800); // Change slide every 800ms
+
+      return () => clearInterval(interval);
+    } else {
+      setCurrentSlideIndex(0); // Reset to first slide when not creating
+    }
+  }, [isCreatingGirl, slideshowImages.length]);
 
   const loadDashboardData = async () => {
     try {
@@ -243,10 +266,21 @@ const Dashboard = () => {
                 <h2 className="text-xl font-semibold">Your Virtual Companions</h2>
                 <Button onClick={handleCreateGirl} disabled={isCreatingGirl}>
                   {isCreatingGirl ? (
-                    <>
-                      <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Creating...
-                    </>
+                    <div className="flex items-center space-x-2">
+                      <div className="relative w-8 h-8 overflow-hidden rounded">
+                        {slideshowImages.map((image, index) => (
+                          <img
+                            key={index}
+                            src={getImageUrl(image)}
+                            alt={`Slide ${index + 1}`}
+                            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                              index === currentSlideIndex ? 'opacity-100' : 'opacity-0'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span>Creating...</span>
+                    </div>
                   ) : (
                     <>
                       <Plus className="w-4 h-4 mr-2" />
@@ -266,10 +300,21 @@ const Dashboard = () => {
                     </p>
                     <Button onClick={handleCreateGirl} disabled={isCreatingGirl}>
                       {isCreatingGirl ? (
-                        <>
-                          <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          Creating...
-                        </>
+                        <div className="flex items-center space-x-2">
+                          <div className="relative w-8 h-8 overflow-hidden rounded">
+                            {slideshowImages.map((image, index) => (
+                              <img
+                                key={index}
+                                src={getImageUrl(image)}
+                                alt={`Slide ${index + 1}`}
+                                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                                  index === currentSlideIndex ? 'opacity-100' : 'opacity-0'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span>Creating...</span>
+                        </div>
                       ) : (
                         'Create Your First Girl'
                       )}

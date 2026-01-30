@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -181,7 +181,10 @@ export class ChatService {
         throw new Error('User not found');
       }
 
-
+      // Check if user has sufficient balance
+      if (user.balance < APP_CONFIG.PRICING.IMAGE_GENERATION) {
+        throw new HttpException('Insufficient balance for image generation', HttpStatus.BAD_REQUEST);
+      }
 
       // Deduct balance
       user.balance -= APP_CONFIG.PRICING.IMAGE_GENERATION;
@@ -404,7 +407,7 @@ export class ChatService {
       }
 
       if (user.balance < APP_CONFIG.PRICING.VIDEO_GENERATION) {
-        throw new Error('Insufficient balance for video generation');
+        throw new HttpException('Insufficient balance for video generation', HttpStatus.BAD_REQUEST);
       }
 
       // Deduct balance
@@ -544,7 +547,7 @@ export class ChatService {
       }
 
       if (user.balance < APP_CONFIG.PRICING.VIDEO_GENERATION) {
-        throw new Error('Insufficient balance for video generation');
+        throw new HttpException('Insufficient balance for video generation', HttpStatus.BAD_REQUEST);
       }
 
       // Deduct balance
@@ -670,194 +673,40 @@ export class ChatService {
   }
 
   async createGirl(userId: string): Promise<{ name: string; appearance: string; personality: string; firstMessage: string; avatarUrl: string }> {
-    this.logger.log('Creating a new girl...');
-    const apiKey = this.configService.get<string>('DEEPSEEK_API_KEY');
-    if (!apiKey || apiKey === 'your_deepseek_api_key_here') {
-      this.logger.warn('DeepSeek API key not set, using fallback');
-      const fallbackAppearance = 'Beautiful girl with long brown hair and blue eyes';
-      const fallbackName = this.generateRandomFemaleName();
-      const avatarUrl = await this.generateImage(`${fallbackAppearance}, in bikini`, undefined, userId);
-      return {
-        name: fallbackName,
-        appearance: fallbackAppearance,
-        personality: 'Shy, smart, affectionate',
-        firstMessage: 'Hi there… I hope we can get to know each other better 💕',
-        avatarUrl,
-      };
-    }
+    this.logger.log('Creating a new girl using local random generation...');
 
-    const prompt = APP_CONFIG.PROMPTS.GIRL_GENERATION;
+    // Generate random girl data locally
+    const girlData = this.generateRandomGirl();
+    const name = this.generateRandomFemaleName();
 
+    this.logger.log(`Generated girl: ${name} with appearance: ${girlData.appearance}`);
+
+    // Generate avatar using external API
+    let avatarUrl = '';
     try {
-      this.logger.log('Sending request to DeepSeek API');
-      const response = await firstValueFrom(
-        this.httpService.post(
-          'https://api.deepseek.com/v1/chat/completions',
-          {
-            model: 'deepseek-chat',
-            messages: [{ role: 'user', content: prompt }],
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-          },
-        ),
-      );
-
-      const content = response.data.choices[0].message.content;
-      this.logger.log(`DeepSeek response: ${content}`);
-
-      // Extract JSON from response using regex to handle multiline strings properly
-      const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/);
-      let jsonString = '';
-
-      if (jsonMatch) {
-        jsonString = jsonMatch[1];
-      } else {
-        // Fallback: try to find JSON object directly
-        const jsonStart = content.indexOf('{');
-        const jsonEnd = content.lastIndexOf('}');
-        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-          jsonString = content.substring(jsonStart, jsonEnd + 1);
-        }
-      }
-
-      this.logger.log(`Extracted JSON: ${jsonString}`);
-
-      // Parse JSON from response
-      try {
-        const parsed = JSON.parse(jsonString);
-        this.logger.log('Successfully parsed girl data');
-        const appearance = parsed.appearance;
-        const name = this.generateRandomFemaleName();
-        this.logger.log(`Generating avatar for girl: ${name} with appearance: ${appearance}`);
-
-        // Generate image directly for avatar (skip balance check)
-        const apiKey = this.configService.get<string>('KIE_API_KEY');
-        if (!apiKey || apiKey === 'your_kie_api_key_here') {
-          this.logger.warn('Kie.ai API key not set, cannot generate avatar');
-          throw new Error('Kie.ai API key not configured');
-        }
-
-        const requestData = {
-          model: 'z-image',
-          input: {
-            prompt: `${appearance}, beautiful girl, portrait, high quality, in bikini`,
-            aspect_ratio: '1:1',
-          },
-        };
-
-        const createResponse = await firstValueFrom(
-          this.httpService.post(
-            'https://api.kie.ai/api/v1/jobs/createTask',
-            requestData,
-            {
-              headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-              },
-            },
-          ),
-        );
-
-        const recordId = createResponse.data.data?.recordId;
-        if (!recordId) {
-          throw new Error('No recordId found in avatar generation response');
-        }
-
-        // Poll for completion
-        const maxPolls = 20;
-        const pollInterval = 3000;
-
-        for (let i = 0; i < maxPolls; i++) {
-          await new Promise(resolve => setTimeout(resolve, pollInterval));
-
-          const statusResponse = await firstValueFrom(
-            this.httpService.get(`https://api.kie.ai/api/v1/jobs/recordInfo`, {
-              params: { taskId: recordId },
-              headers: {
-                'Authorization': `Bearer ${apiKey}`,
-              },
-            }),
-          );
-
-          const taskState = statusResponse.data.data?.state;
-          if (taskState === 'success') {
-            const resultJson = statusResponse.data.data?.resultJson;
-            const result = JSON.parse(resultJson);
-            const originalAvatarUrl = result.resultUrls?.[0];
-
-            // Download and save locally
-            const avatarUrl = await this.downloadAndSaveFile(originalAvatarUrl, 'image');
-            this.logger.log(`Generated avatar - Local: ${avatarUrl}, Original: ${originalAvatarUrl}`);
-
-            // Save girl to database
-            const girl = this.girlRepository.create({
-              userId,
-              name,
-              appearance,
-              personality: Array.isArray(parsed.personality) ? parsed.personality.join(', ') : parsed.personality,
-              avatarUrl,
-              originalAvatarUrl,
-            });
-            await this.girlRepository.save(girl);
-
-            return {
-              name,
-              appearance,
-              personality: Array.isArray(parsed.personality) ? parsed.personality.join(', ') : parsed.personality,
-              firstMessage: parsed.firstMessage,
-              avatarUrl,
-            };
-          }
-        }
-        throw new Error('Avatar generation timeout');
-      } catch (parseError) {
-        this.logger.error('Failed to parse JSON from DeepSeek response, using fallback', parseError);
-        const fallbackAppearance = 'Beautiful girl with long brown hair and blue eyes';
-        const fallbackName = this.generateRandomFemaleName();
-
-        // Try to generate image, but don't fail if balance is insufficient
-        let avatarUrl = '';
-        try {
-          avatarUrl = await this.generateImage(`${fallbackAppearance}, in bikini`, undefined, userId, true);
-        } catch (imageError) {
-          this.logger.warn('Could not generate image due to insufficient balance or API error, saving girl without avatar', imageError);
-        }
-
-        // Save fallback girl to database
-        const girl = this.girlRepository.create({
-          userId,
-          name: fallbackName,
-          appearance: fallbackAppearance,
-          personality: 'Shy, smart, affectionate',
-          avatarUrl,
-        });
-        await this.girlRepository.save(girl);
-
-        return {
-          name: fallbackName,
-          appearance: fallbackAppearance,
-          personality: 'Shy, smart, affectionate',
-          firstMessage: 'Hi there… I hope we can get to know each other better 💕',
-          avatarUrl,
-        };
-      }
-    } catch (error) {
-      this.logger.error('Error calling DeepSeek API, using fallback', error);
-      const fallbackAppearance = 'Beautiful girl with long brown hair and blue eyes';
-      const fallbackName = this.generateRandomFemaleName();
-      const avatarUrl = await this.generateImage(`${fallbackAppearance}, in bikini`, undefined, userId, true);
-      return {
-        name: fallbackName,
-        appearance: fallbackAppearance,
-        personality: 'Shy, smart, affectionate',
-        firstMessage: 'Hi there… I hope we can get to know each other better 💕',
-        avatarUrl,
-      };
+      avatarUrl = await this.generateImage(`${girlData.appearance}, beautiful girl, portrait, high quality, in bikini`, undefined, userId, true);
+      this.logger.log(`Generated avatar for ${name}: ${avatarUrl}`);
+    } catch (imageError) {
+      this.logger.warn(`Could not generate avatar for ${name}, saving without avatar`, imageError);
     }
+
+    // Save girl to database
+    const girl = this.girlRepository.create({
+      userId,
+      name,
+      appearance: girlData.appearance,
+      personality: girlData.personality,
+      avatarUrl,
+    });
+    await this.girlRepository.save(girl);
+
+    return {
+      name,
+      appearance: girlData.appearance,
+      personality: girlData.personality,
+      firstMessage: girlData.firstMessage,
+      avatarUrl,
+    };
   }
 
   private async downloadAndSaveFile(url: string, type: 'image' | 'video'): Promise<string> {
@@ -894,6 +743,35 @@ export class ChatService {
       this.logger.error(`Failed URL: ${url}`);
       return url; // Return original URL if download fails
     }
+  }
+
+  private generateRandomGirl(): { appearance: string; personality: string; firstMessage: string } {
+    const params = APP_CONFIG.GIRL_GENERATION_PARAMS;
+
+    // Randomly select traits
+    const hairLength = params.HAIR_LENGTH[Math.floor(Math.random() * params.HAIR_LENGTH.length)];
+    const hairColor = params.HAIR_COLOR[Math.floor(Math.random() * params.HAIR_COLOR.length)];
+    const ethnicity = params.ETHNICITY[Math.floor(Math.random() * params.ETHNICITY.length)];
+    const bodyType = params.BODY_TYPE[Math.floor(Math.random() * params.BODY_TYPE.length)];
+    const breastSize = params.BREAST_SIZE[Math.floor(Math.random() * params.BREAST_SIZE.length)];
+    const skinTone = params.SKIN_TONE[Math.floor(Math.random() * params.SKIN_TONE.length)];
+
+    // Select 3-5 random personality traits
+    const personalityCount = Math.floor(Math.random() * 3) + 3; // 3-5 traits
+    const shuffledTraits = [...params.PERSONALITY_TRAITS].sort(() => 0.5 - Math.random());
+    const personality = shuffledTraits.slice(0, personalityCount).join(', ');
+
+    // Random first message
+    const firstMessage = params.FIRST_MESSAGES[Math.floor(Math.random() * params.FIRST_MESSAGES.length)];
+
+    // Build appearance description
+    const appearance = `A beautiful ${ethnicity} girl with ${hairLength} ${hairColor} hair and ${skinTone} skin. She has a ${bodyType} build with ${breastSize} breasts.`;
+
+    return {
+      appearance,
+      personality,
+      firstMessage
+    };
   }
 
   private generateRandomFemaleName(): string {

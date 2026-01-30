@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { AuthGuard } from '@nestjs/passport';
 import { Response as ExpressResponse } from 'express';
 
 @Controller('auth')
@@ -26,13 +27,13 @@ export class AuthController {
   }
 
   @Get('google')
-  @UseGuards() // No guard for OAuth initiation
+  @UseGuards(AuthGuard('google'))
   async googleAuth(@Request() req) {
-    // This will be handled by Passport
+    // Passport will handle the redirect
   }
 
   @Get('google/callback')
-  @UseGuards() // No guard for OAuth callback
+  @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Request() req, @Response() res) {
     try {
       const result = await this.authService.googleLogin(req.user);

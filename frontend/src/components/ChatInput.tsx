@@ -51,7 +51,7 @@ const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Say anything… describe how you want me to be"
+            placeholder="Say anything… Or ask for a photo"
             disabled={disabled}
             rows={1}
             className="w-full bg-secondary/50 border border-border/50 rounded-2xl px-4 py-3 pr-4 text-[15px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 resize-none transition-all font-body disabled:opacity-50 scrollbar-hide"

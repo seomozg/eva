@@ -73,34 +73,148 @@ This will start:
 
 ## Production Deployment
 
-### Environment Variables for Production
+### 1. Server Requirements
 
-Make sure your production environment has:
+- **Ubuntu/Debian** or similar Linux distribution
+- **Docker** and **Docker Compose** installed
+- **Domain name** pointing to your server
+- **SSL certificate** (Let's Encrypt recommended)
 
-```env
-GOOGLE_CALLBACK_URL=http://eva.test-domain.ru/auth/google/callback
-# ... other variables
+### 2. Server Setup
+
+```bash
+# Clone repository
+git clone https://github.com/your-username/eva.git
+cd eva
+
+# Copy environment file
+cp .env.example .env
+
+# Edit .env with your production values
+nano .env
 ```
 
-### Nginx Configuration Example
+### 3. Environment Variables for Production
+
+```env
+# Database
+DB_HOST=db
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=your_secure_db_password_here
+DB_DATABASE=eva_db
+
+# JWT
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+
+# AI APIs
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+KIE_API_KEY=your_kie_api_key_here
+RUNPOD_API_KEY=your_runpod_api_key_here
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_client_secret_here
+GOOGLE_CALLBACK_URL=https://your-domain.com/auth/google/callback
+
+# Production settings
+NODE_ENV=production
+PORT=3000
+```
+
+### 4. Deploy with Docker
+
+```bash
+# Build and start production containers
+docker-compose -f docker-compose.prod.yml up --build -d
+
+# Check logs
+docker-compose -f docker-compose.prod.yml logs -f
+
+# Run database migrations (if needed)
+docker-compose -f docker-compose.prod.yml exec backend npm run migration:run
+```
+
+### 5. Nginx Configuration
 
 ```nginx
 server {
     listen 80;
-    server_name eva.test-domain.ru;
+    server_name your-domain.com;
 
+    # Redirect HTTP to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name your-domain.com;
+
+    # SSL configuration
+    ssl_certificate /path/to/your/certificate.crt;
+    ssl_certificate_key /path/to/your/private.key;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+
+    # Frontend
     location / {
-        proxy_pass http://localhost:5173;  # Frontend
+        proxy_pass http://localhost:80;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /api {
-        proxy_pass http://localhost:3000;  # Backend
+    # Backend API
+    location /auth/google {
+        proxy_pass http://localhost:3000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
+```
+
+### 6. SSL Certificate (Let's Encrypt)
+
+```bash
+# Install certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Get SSL certificate
+sudo certbot --nginx -d your-domain.com
+
+# Certificates will be auto-renewed
+```
+
+### 7. Monitoring
+
+```bash
+# Check container status
+docker-compose -f docker-compose.prod.yml ps
+
+# View logs
+docker-compose -f docker-compose.prod.yml logs -f backend
+docker-compose -f docker-compose.prod.yml logs -f frontend
+
+# Restart services
+docker-compose -f docker-compose.prod.yml restart
+```
+
+### 8. Backup
+
+```bash
+# Backup database
+docker-compose -f docker-compose.prod.yml exec db pg_dump -U postgres eva_db > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Backup uploads
+tar -czf uploads_backup_$(date +%Y%m%d_%H%M%S).tar.gz backend/uploads/
 ```
 
 ## API Endpoints
