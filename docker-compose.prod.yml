@@ -33,6 +33,8 @@ services:
     depends_on:
       eva-db:
         condition: service_healthy
+    volumes:
+      - eva_prod_uploads:/app/uploads
     networks:
       - eva_prod_app_network
     restart: unless-stopped
@@ -62,6 +64,7 @@ services:
 
 volumes:
   eva_prod_postgres_data:
+  eva_prod_uploads:
 
 networks:
   eva_prod_app_network:
