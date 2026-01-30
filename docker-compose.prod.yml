@@ -1,8 +1,9 @@
 version: '3.8'
 
 services:
-  db:
+  eva-db:
     image: postgres:15-alpine
+    container_name: eva-prod-db
     environment:
       POSTGRES_DB: eva_db
       POSTGRES_USER: postgres
@@ -18,10 +19,11 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
+  eva-backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: eva-prod-backend
     ports:
       - "127.0.0.1:3001:3000"  # Bind to localhost to avoid conflicts
     env_file:
@@ -29,7 +31,7 @@ services:
     environment:
       - NODE_ENV=production
     depends_on:
-      db:
+      eva-db:
         condition: service_healthy
     networks:
       - eva_prod_app_network
@@ -40,14 +42,15 @@ services:
       timeout: 10s
       retries: 3
 
-  frontend:
+  eva-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: eva-prod-frontend
     ports:
       - "127.0.0.1:8080:80"  # Bind to localhost, use port 8080 instead of 80
     depends_on:
-      - backend
+      - eva-backend
     networks:
       - eva_prod_app_network
     restart: unless-stopped
