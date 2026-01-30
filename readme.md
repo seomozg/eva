@@ -179,6 +179,13 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # Static files (uploads)
+    location /uploads/ {
+        alias /var/www/eva.test-domain.ru/backend/uploads/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
     # EVA Backend routes
     location /auth/ {
         proxy_pass http://localhost:3001;
