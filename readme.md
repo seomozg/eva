@@ -161,8 +161,24 @@ server {
     add_header Referrer-Policy "no-referrer-when-downgrade" always;
     add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
 
-    # Frontend (EVA on port 8080)
+    # Static assets - serve directly from frontend container
+    location /assets/ {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Frontend (EVA on port 8080) - SPA catch-all
     location / {
+        # Handle SPA routing on server level
+        try_files $uri $uri/ @frontend;
+    }
+
+    location @frontend {
         proxy_pass http://localhost:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
