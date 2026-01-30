@@ -30,6 +30,7 @@ export class AuthController {
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleAuth(@Request() req) {
+    console.log('Google OAuth initiated, req.query:', req.query);
     // Passport will handle the redirect
   }
 

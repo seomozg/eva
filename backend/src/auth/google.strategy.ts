@@ -9,13 +9,16 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(private configService: ConfigService) {
     const clientID = APP_CONFIG.API_KEYS.GOOGLE_CLIENT_ID;
     const clientSecret = APP_CONFIG.API_KEYS.GOOGLE_CLIENT_SECRET;
+    const callbackURL = APP_CONFIG.OAUTH.GOOGLE_CALLBACK_URL;
+
+    console.log('Google OAuth callbackURL:', callbackURL);
 
     if (!clientID || !clientSecret) {
       // Skip Google OAuth if credentials are not provided
       super({
         clientID: 'dummy',
         clientSecret: 'dummy',
-        callbackURL: APP_CONFIG.OAUTH.GOOGLE_CALLBACK_URL,
+        callbackURL,
         scope: ['email', 'profile'],
       });
       return;
@@ -24,7 +27,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const options: StrategyOptions = {
       clientID,
       clientSecret,
-      callbackURL: APP_CONFIG.OAUTH.GOOGLE_CALLBACK_URL,
+      callbackURL,
       scope: ['email', 'profile'],
     };
     super(options);
