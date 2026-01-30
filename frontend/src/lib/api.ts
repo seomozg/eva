@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: process.env.NODE_ENV === 'production'
-    ? 'http://eva.test-domain.ru'
+    ? 'https://eva.test-domain.ru'
     : 'http://localhost:3000', // Development fallback
 });
 
@@ -40,7 +40,7 @@ api.interceptors.response.use(
 // Helper function to get correct image URL
 export const getImageUrl = (path: string): string => {
   if (process.env.NODE_ENV === 'production') {
-    return `http://eva.test-domain.ru${path}`;
+    return `https://eva.test-domain.ru${path}`;
   }
   return `http://localhost:3000${path}`;
 };
