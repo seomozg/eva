@@ -223,9 +223,9 @@ export class ChatService {
           // 1. Install ngrok: npm install -g ngrok
           // 2. Run: ngrok http 3000
           // 3. Use the ngrok URL in the baseUrl below
-          const baseUrl = process.env.NODE_ENV === 'production'
-            ? 'http://eva.test-domain.ru'
-            : process.env.NGROK_URL || 'http://localhost:3000'; // Set NGROK_URL in .env
+        const baseUrl = process.env.NODE_ENV === 'production'
+          ? 'https://eva.test-domain.ru'
+          : process.env.NGROK_URL || 'http://localhost:3000'; // Set NGROK_URL in .env
           fullImageUrl = `${baseUrl}${baseImageUrl}`;
 
           this.logger.warn(`Converting local URL to full URL: ${fullImageUrl}`);
@@ -442,7 +442,7 @@ export class ChatService {
       // Convert local URLs to full URLs for Kie.ai
       if (imageUrl.startsWith('/uploads/')) {
         const baseUrl = process.env.NODE_ENV === 'production'
-          ? 'http://eva.test-domain.ru'
+          ? 'https://eva.test-domain.ru'
           : 'http://localhost:3000';
         imageUrl = `${baseUrl}${imageUrl}`;
       }
@@ -576,7 +576,7 @@ export class ChatService {
       let fullImageUrl = imageUrl;
       if (imageUrl.startsWith('/uploads/')) {
         const baseUrl = process.env.NODE_ENV === 'production'
-          ? 'http://eva.test-domain.ru'
+          ? 'https://eva.test-domain.ru'
           : 'http://localhost:3000';
         fullImageUrl = `${baseUrl}${imageUrl}`;
       }
