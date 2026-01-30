@@ -98,7 +98,7 @@ nano .env
 
 ```env
 # Database
-DB_HOST=db
+DB_HOST=eva-db
 DB_PORT=5432
 DB_USERNAME=postgres
 DB_PASSWORD=your_secure_db_password_here
@@ -179,8 +179,24 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Google OAuth (EVA backend)
+    # EVA Backend routes
     location /auth/ {
+        proxy_pass http://localhost:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /users/ {
+        proxy_pass http://localhost:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /chat/ {
         proxy_pass http://localhost:3001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
