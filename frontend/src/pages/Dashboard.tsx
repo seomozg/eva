@@ -323,7 +323,7 @@ const Dashboard = () => {
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {girls.map((girl) => (
+                  {Array.isArray(girls) && girls.map((girl) => (
                     <Card key={girl.id} className="relative">
                       {/* Delete button in top-right corner */}
                       <button
@@ -402,7 +402,7 @@ const Dashboard = () => {
                 <Card>
                   <CardContent className="p-0">
                     <div className="divide-y divide-border">
-                      {balance.transactions.map((transaction) => (
+                      {Array.isArray(balance.transactions) && balance.transactions.map((transaction) => (
                         <div key={transaction.id} className="p-4 flex items-center justify-between">
                           <div>
                             <p className="font-medium">{transaction.description}</p>
