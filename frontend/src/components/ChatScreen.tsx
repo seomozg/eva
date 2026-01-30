@@ -412,7 +412,7 @@ const ChatScreen = () => {
         // Stream the response
         const apiMessages = [systemPrompt, ...conversationHistory, { role: 'user' as const, content }];
         const streamUrl = process.env.NODE_ENV === 'production'
-          ? 'http://eva.test-domain.ru'
+          ? 'https://eva.test-domain.ru'
           : 'http://localhost:3000';
         const eventSource = new EventSource(`${streamUrl}/chat/send-stream?messages=${encodeURIComponent(JSON.stringify(apiMessages))}`);
         let lastChunkTime = Date.now();
