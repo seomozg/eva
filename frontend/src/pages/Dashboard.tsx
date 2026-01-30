@@ -388,7 +388,7 @@ const Dashboard = () => {
             <TabsContent value="transactions" className="space-y-6">
               <h2 className="text-xl font-semibold">Transaction History</h2>
 
-              {balance.transactions.length === 0 ? (
+              {!balance?.transactions || balance.transactions.length === 0 ? (
                 <Card>
                   <CardContent className="text-center py-12">
                     <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -474,7 +474,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-primary mb-4">
-                  {balance.balance} credits
+                  {balance?.balance || 0} credits
                 </div>
                 <Button variant="outline" size="sm">
                   Top up balance
