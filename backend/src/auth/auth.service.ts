@@ -48,22 +48,30 @@ export class AuthService {
 
   async login(loginDto: LoginDto): Promise<{ access_token: string }> {
     const { email, password } = loginDto;
+    console.log('Login attempt for:', email);
 
     // Find user
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
+      console.log('User not found:', email);
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    console.log('User found:', user.id, 'password hash:', user.password ? 'exists' : 'empty');
+
     // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, user.password || '');
+    console.log('Password valid:', isPasswordValid);
+
     if (!isPasswordValid) {
+      console.log('Invalid password for user:', user.id);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     // Generate JWT
     const payload = { email: user.email, sub: user.id };
     const access_token = this.jwtService.sign(payload);
+    console.log('Login successful for:', user.id);
 
     return { access_token };
   }
