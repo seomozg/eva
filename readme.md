@@ -174,11 +174,6 @@ server {
 
     # Frontend (EVA on port 8080) - SPA catch-all
     location / {
-        # Handle SPA routing on server level
-        try_files $uri $uri/ @frontend;
-    }
-
-    location @frontend {
         proxy_pass http://localhost:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
