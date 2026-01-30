@@ -63,13 +63,13 @@ npm run dev
 #### Production with Docker
 ```bash
 # From project root
-docker-compose up --build
+docker compose up --build
 ```
 
 This will start:
-- PostgreSQL database on port 5432
-- Backend API on port 3000
-- Frontend on port 80
+- PostgreSQL database on port 5432 (internal)
+- Backend API on port 3001 (localhost only)
+- Frontend on port 8080 (localhost only)
 
 ## Production Deployment
 
@@ -126,13 +126,13 @@ PORT=3000
 
 ```bash
 # Build and start production containers
-docker-compose -f docker-compose.prod.yml up --build -d
+docker compose -f docker-compose.prod.yml up --build -d
 
 # Check logs
-docker-compose -f docker-compose.prod.yml logs -f
+docker compose -f docker-compose.prod.yml logs -f
 
 # Run database migrations (if needed)
-docker-compose -f docker-compose.prod.yml exec backend npm run migration:run
+docker compose -f docker-compose.prod.yml exec backend npm run migration:run
 ```
 
 ### 5. Nginx Configuration
@@ -161,18 +161,27 @@ server {
     add_header Referrer-Policy "no-referrer-when-downgrade" always;
     add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
 
-    # Frontend
+    # Frontend (EVA on port 8080)
     location / {
-        proxy_pass http://localhost:80;
+        proxy_pass http://localhost:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Backend API
-    location /auth/google {
-        proxy_pass http://localhost:3000;
+    # Backend API (EVA on port 3001)
+    location /api/ {
+        proxy_pass http://localhost:3001/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Google OAuth (EVA backend)
+    location /auth/ {
+        proxy_pass http://localhost:3001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -197,21 +206,21 @@ sudo certbot --nginx -d your-domain.com
 
 ```bash
 # Check container status
-docker-compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml ps
 
 # View logs
-docker-compose -f docker-compose.prod.yml logs -f backend
-docker-compose -f docker-compose.prod.yml logs -f frontend
+docker compose -f docker-compose.prod.yml logs -f backend
+docker compose -f docker-compose.prod.yml logs -f frontend
 
 # Restart services
-docker-compose -f docker-compose.prod.yml restart
+docker compose -f docker-compose.prod.yml restart
 ```
 
 ### 8. Backup
 
 ```bash
 # Backup database
-docker-compose -f docker-compose.prod.yml exec db pg_dump -U postgres eva_db > backup_$(date +%Y%m%d_%H%M%S).sql
+docker compose -f docker-compose.prod.yml exec db pg_dump -U postgres eva_db > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # Backup uploads
 tar -czf uploads_backup_$(date +%Y%m%d_%H%M%S).tar.gz backend/uploads/
