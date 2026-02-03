@@ -4,20 +4,27 @@ import { ConfigService } from '@nestjs/config';
 import { ChatService } from './chat.service';
 import { of } from 'rxjs';
 import { AxiosResponse } from 'axios';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { User } from '../entities/user.entity';
+import { Girl } from '../entities/girl.entity';
+import { Transaction } from '../entities/transaction.entity';
 
 describe('ChatService', () => {
   let service: ChatService;
   let httpService: HttpService;
   let configService: ConfigService;
 
+  let testingModule: TestingModule;
+
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    testingModule = await Test.createTestingModule({
       providers: [
         ChatService,
         {
           provide: HttpService,
           useValue: {
             post: jest.fn(),
+            get: jest.fn(),
           },
         },
         {
@@ -26,12 +33,33 @@ describe('ChatService', () => {
             get: jest.fn(),
           },
         },
+        {
+          provide: getRepositoryToken(User),
+          useValue: {
+            findOne: jest.fn(),
+            save: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(Girl),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(Transaction),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
-    service = module.get<ChatService>(ChatService);
-    httpService = module.get<HttpService>(HttpService);
-    configService = module.get<ConfigService>(ConfigService);
+    service = testingModule.get<ChatService>(ChatService);
+    httpService = testingModule.get<HttpService>(HttpService);
+    configService = testingModule.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {
@@ -51,7 +79,7 @@ describe('ChatService', () => {
     jest.spyOn(httpService, 'post').mockReturnValue(of(mockResponse));
     jest.spyOn(configService, 'get').mockReturnValue('test-api-key');
 
-    const result = await service.sendMessage('Hello');
+    const result = await service.sendMessage([{ role: 'user', content: 'Hello' }]);
 
     expect(configService.get).toHaveBeenCalledWith('DEEPSEEK_API_KEY');
     expect(httpService.post).toHaveBeenCalledWith(
@@ -59,6 +87,7 @@ describe('ChatService', () => {
       {
         model: 'deepseek-chat',
         messages: [{ role: 'user', content: 'Hello' }],
+        max_tokens: 1000,
       },
       {
         headers: {
@@ -70,96 +99,60 @@ describe('ChatService', () => {
     expect(result).toBe('Hello from AI');
   });
 
-  it('should generate image and return URL', async () => {
+  it('should generate image via fal.ai and return local URL', async () => {
     const mockResponse = {
-      data: { imageUrl: 'https://example.com/image.jpg' },
+      data: {
+        images: [{ url: 'https://example.com/image.jpg' }],
+      },
       status: 200,
       statusText: 'OK',
       headers: {},
       config: {},
     } as AxiosResponse;
     jest.spyOn(httpService, 'post').mockReturnValue(of(mockResponse));
-    jest.spyOn(configService, 'get').mockReturnValue('kie-api-key');
+    jest.spyOn(configService, 'get').mockReturnValue('fal-api-key');
+    jest.spyOn(service as any, 'downloadAndSaveFile').mockResolvedValue('/uploads/images/test.jpg');
 
     const result = await service.generateImage('A beautiful landscape');
 
-    expect(configService.get).toHaveBeenCalledWith('KIE_API_KEY');
+    expect(configService.get).toHaveBeenCalledWith('FAL_API_KEY');
     expect(httpService.post).toHaveBeenCalledWith(
-      'https://api.kie.ai/v1/images/generate',
-      { prompt: 'A beautiful landscape' },
+      'https://fal.run/fal-ai/z-image/turbo',
+      {
+        prompt: 'A beautiful landscape',
+        image_size: {
+          width: 720,
+          height: 1280,
+        },
+        num_images: 1,
+        enable_safety_checker: false,
+      },
       {
         headers: {
-          Authorization: 'Bearer kie-api-key',
+          Authorization: 'Key fal-api-key',
           'Content-Type': 'application/json',
         },
       },
     );
-    expect(result).toBe('https://example.com/image.jpg');
+    expect(result).toBe('/uploads/images/test.jpg');
   });
 
-  it('should generate video and return URL', async () => {
-    const mockResponse = {
-      data: { videoUrl: 'https://example.com/video.mp4' },
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {},
-    } as AxiosResponse;
-    jest.spyOn(httpService, 'post').mockReturnValue(of(mockResponse));
-    jest.spyOn(configService, 'get').mockReturnValue('kie-api-key');
+  it('should create a new girl and include avatar URL and id', async () => {
+    jest.spyOn(service as any, 'generateImage').mockResolvedValue('/uploads/images/test.jpg');
+    const girlRepository = testingModule.get(getRepositoryToken(Girl));
+    jest.spyOn(girlRepository, 'create').mockReturnValue({ id: 'girl-id' });
+    jest.spyOn(girlRepository, 'save').mockResolvedValue({ id: 'girl-id' });
 
-    const result = await service.generateVideo('A cat playing');
+    const result = await service.createGirl('user-id');
 
-    expect(configService.get).toHaveBeenCalledWith('KIE_API_KEY');
-    expect(httpService.post).toHaveBeenCalledWith(
-      'https://api.kie.ai/v1/videos/generate',
-      { prompt: 'A cat playing' },
-      {
-        headers: {
-          Authorization: 'Bearer kie-api-key',
-          'Content-Type': 'application/json',
-        },
-      },
-    );
-    expect(result).toBe('https://example.com/video.mp4');
-  });
-
-  it('should create a new girl with appearance, personality, and first message', async () => {
-    const mockResponse = {
-      data: {
-        choices: [{
-          message: {
-            content: JSON.stringify({
-              appearance: 'Blonde hair, blue eyes, slim figure',
-              personality: 'Shy, intelligent, caring',
-              firstMessage: 'Hello! I\'m so excited to meet you 💕'
-            })
-          }
-        }],
-      },
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {},
-    } as AxiosResponse;
-    jest.spyOn(httpService, 'post').mockReturnValue(of(mockResponse));
-    jest.spyOn(configService, 'get').mockReturnValue('test-api-key');
-
-    const result = await service.createGirl();
-
-    expect(configService.get).toHaveBeenCalledWith('DEEPSEEK_API_KEY');
-    expect(httpService.post).toHaveBeenCalledWith(
-      'https://api.deepseek.com/v1/chat/completions',
-      expect.objectContaining({
-        model: 'deepseek-chat',
-        messages: expect.any(Array),
-      }),
-      expect.any(Object),
-    );
-    expect(result).toEqual({
-      appearance: 'Blonde hair, blue eyes, slim figure',
-      personality: 'Shy, intelligent, caring',
-      firstMessage: 'Hello! I\'m so excited to meet you 💕',
-    });
+    expect(service.generateImage).toHaveBeenCalled();
+    expect(result.avatarUrl).toBe('/uploads/images/test.jpg');
+    expect(result.id).toBe('girl-id');
+    expect(result).toEqual(expect.objectContaining({
+      name: expect.any(String),
+      appearance: expect.any(String),
+      personality: expect.any(String),
+      firstMessage: expect.any(String),
+    }));
   });
 });

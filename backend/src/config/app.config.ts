@@ -10,6 +10,7 @@ export const APP_CONFIG = {
   // API Keys (environment variables)
   API_KEYS: {
     DEEPSEEK: process.env.DEEPSEEK_API_KEY || 'your_deepseek_api_key_here',
+    FAL_AI: process.env.FAL_API_KEY || 'your_fal_api_key_here',
     KIE_AI: process.env.KIE_API_KEY || 'your_kie_api_key_here',
     RUNPOD: process.env.RUNPOD_API_KEY || 'your_runpod_api_key_here',
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',

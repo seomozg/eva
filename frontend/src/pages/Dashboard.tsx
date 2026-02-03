@@ -121,17 +121,22 @@ const Dashboard = () => {
       // Create new girl via API
       const girlData = await chatAPI.createGirl();
 
-      // Get the created girl from database to get real ID
-      const girls = await usersAPI.getGirls();
-      const newGirl = girls.find(g => g.name === girlData.name);
+      if (girlData?.id) {
+        const newGirl = {
+          id: girlData.id,
+          name: girlData.name,
+          appearance: girlData.appearance,
+          personality: girlData.personality,
+          avatarUrl: girlData.avatarUrl,
+          createdAt: new Date().toISOString(),
+        };
 
-      if (newGirl) {
         // Clear old chat messages and save new girl to localStorage
         localStorage.removeItem('chatMessages');
         localStorage.setItem('currentGirl', JSON.stringify(newGirl));
-        navigate(`/chat/${newGirl.id}`);
+        navigate(`/chat/${girlData.id}`);
       } else {
-        console.error('Could not find created girl in database');
+        console.error('Create girl API did not return an id');
         navigate('/chat');
       }
     } catch (error) {

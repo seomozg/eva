@@ -301,98 +301,51 @@ export class ChatService {
         return '';
       }
     } else {
-      // Use Kie.ai for new image generation
-      this.logger.log('Generating new image using Kie.ai...');
-      const apiKey = this.configService.get<string>('KIE_API_KEY');
-      if (!apiKey || apiKey === 'your_kie_api_key_here') {
-        this.logger.warn('Kie.ai API key not set, skipping image generation');
+      // Use fal.ai for new image generation
+      this.logger.log('Generating new image using fal.ai...');
+      const apiKey = this.configService.get<string>('FAL_API_KEY');
+      if (!apiKey || apiKey === 'your_fal_api_key_here') {
+        this.logger.warn('fal.ai API key not set, skipping image generation');
         return '';
       }
 
       try {
-        this.logger.log('Sending request to Kie.ai API');
+        this.logger.log('Sending request to fal.ai API');
         const requestData = {
-          model: 'z-image',
-          input: {
-            prompt,
-            aspect_ratio: '1:1',
+          prompt,
+          image_size: {
+            width: 720,
+            height: 1280,
           },
+          num_images: 1,
+          enable_safety_checker: false,
         };
 
         const createResponse = await firstValueFrom(
           this.httpService.post(
-            'https://api.kie.ai/api/v1/jobs/createTask',
+            'https://fal.run/fal-ai/z-image/turbo',
             requestData,
             {
               headers: {
-                'Authorization': `Bearer ${apiKey}`,
+                'Authorization': `Key ${apiKey}`,
                 'Content-Type': 'application/json',
               },
             },
           ),
         );
 
-        this.logger.log(`Create task response: ${JSON.stringify(createResponse.data)}`);
-        const recordId = createResponse.data.data?.recordId;
-        if (!recordId) {
-          this.logger.error('No recordId found in create task response');
+        const responseData = createResponse.data;
+        this.logger.log(`fal.ai response: ${JSON.stringify(responseData)}`);
+        const imageUrl = responseData?.images?.[0]?.url;
+        if (!imageUrl) {
+          this.logger.error(`No image URL found in fal.ai response. Expected response.images[0].url. Payload: ${JSON.stringify(responseData)}`);
           return '';
         }
-        this.logger.log(`Image generation task created with recordId: ${recordId}`);
 
-        // Poll for completion using recordInfo
-        const maxPolls = 20; // Max 5 minutes
-        const pollInterval = 3000; // 10 seconds
-
-        for (let i = 0; i < maxPolls; i++) {
-          await new Promise(resolve => setTimeout(resolve, pollInterval));
-
-          try {
-            const statusResponse = await firstValueFrom(
-              this.httpService.get(`https://api.kie.ai/api/v1/jobs/recordInfo`, {
-                params: { taskId: recordId },
-                headers: {
-                  'Authorization': `Bearer ${apiKey}`,
-                },
-              }),
-            );
-
-            this.logger.log(`Status response: ${JSON.stringify(statusResponse.data)}`);
-            const taskState = statusResponse.data.data?.state;
-            this.logger.log(`Task ${recordId} status: ${taskState}`);
-
-            if (taskState === 'success') {
-              const resultJson = statusResponse.data.data?.resultJson;
-              if (resultJson) {
-                try {
-                  const result = JSON.parse(resultJson);
-                  const imageUrl = result.resultUrls?.[0];
-                  this.logger.log(`Image generated: ${imageUrl}`);
-                  // Download and save locally
-                  if (imageUrl) {
-                    const localUrl = await this.downloadAndSaveFile(imageUrl, 'image');
-                    return localUrl;
-                  }
-                  return '';
-                } catch (parseError) {
-                  this.logger.error('Failed to parse resultJson', parseError);
-                  return '';
-                }
-              }
-              return '';
-            } else if (taskState === 'failed') {
-              this.logger.error(`Image generation failed for task ${recordId}`);
-              return '';
-            }
-          } catch (pollError) {
-            this.logger.error(`Error polling task ${recordId}`, pollError);
-          }
-        }
-
-        this.logger.warn(`Image generation timeout for task ${recordId}`);
-        return '';
+        const localUrl = await this.downloadAndSaveFile(imageUrl, 'image');
+        return localUrl;
       } catch (error) {
-        this.logger.error('Error calling Kie.ai API', error);
+        this.logger.error('Error calling fal.ai API', error);
         return '';
       }
     }
@@ -672,7 +625,7 @@ export class ChatService {
     }
   }
 
-  async createGirl(userId: string): Promise<{ name: string; appearance: string; personality: string; firstMessage: string; avatarUrl: string }> {
+  async createGirl(userId: string): Promise<{ id: string; name: string; appearance: string; personality: string; firstMessage: string; avatarUrl: string }> {
     this.logger.log('Creating a new girl using local random generation...');
 
     // Generate random girl data locally
@@ -698,9 +651,10 @@ export class ChatService {
       personality: girlData.personality,
       avatarUrl,
     });
-    await this.girlRepository.save(girl);
+    const savedGirl = await this.girlRepository.save(girl);
 
     return {
+      id: savedGirl.id,
       name,
       appearance: girlData.appearance,
       personality: girlData.personality,

@@ -75,7 +75,7 @@ export const chatAPI = {
     });
     return response.data;
   },
-  createGirl: async (): Promise<{ name: string; appearance: string; personality: string; firstMessage: string; avatarUrl: string }> => {
+  createGirl: async (): Promise<{ id: string; name: string; appearance: string; personality: string; firstMessage: string; avatarUrl: string }> => {
     const response = await api.post('/chat/create-girl');
     return response.data;
   },
