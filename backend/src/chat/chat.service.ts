@@ -314,7 +314,7 @@ export class ChatService {
         const requestData = {
           prompt,
           image_size: {
-            width: 720,
+            width: 1280,
             height: 1280,
           },
           num_images: 1,
