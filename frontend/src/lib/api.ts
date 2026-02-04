@@ -39,6 +39,12 @@ api.interceptors.response.use(
 
 // Helper function to get correct image URL
 export const getImageUrl = (path: string): string => {
+  // If it's already a full URL (starts with http), return as-is
+  if (path && (path.startsWith('http://') || path.startsWith('https://'))) {
+    return path;
+  }
+
+  // Otherwise, prepend the base URL
   if (process.env.NODE_ENV === 'production') {
     return `https://eva.test-domain.ru${path}`;
   }

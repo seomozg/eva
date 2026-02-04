@@ -94,7 +94,7 @@ export class UsersService {
       select: ['id', 'name', 'appearance', 'personality', 'avatarUrl', 'originalAvatarUrl', 'createdAt'], // Include originalAvatarUrl
     });
 
-    // Convert local URLs to server URLs
+    // Convert local URLs to server URLs (only if they are still local)
     const baseUrl = 'https://eva.test-domain.ru';
     return girls.map(girl => ({
       ...girl,
