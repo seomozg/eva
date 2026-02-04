@@ -347,7 +347,7 @@ export class ChatService {
             image_url: imageUrl,
             num_frames: 121,
             fps: 25,
-            enable_safety_checker: true,
+            enable_safety_checker: false,
           },
           {
             headers: {
@@ -418,7 +418,7 @@ export class ChatService {
             image_url: fullImageUrl,
             num_frames: 121,
             fps: 25,
-            enable_safety_checker: true,
+            enable_safety_checker: false,
           },
           {
             headers: {
