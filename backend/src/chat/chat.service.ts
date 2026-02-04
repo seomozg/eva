@@ -200,10 +200,10 @@ export class ChatService {
       await this.transactionRepository.save(transaction);
     }
 
-    // If baseImageUrl is provided and not empty, use Fal.ai for editing (test implementation)
+    // If baseImageUrl is provided and not empty, use Fal.ai for editing
     if (baseImageUrl && baseImageUrl.trim() !== '') {
-      // Use Fal.ai queue for image editing
-      this.logger.log('Generating image using Fal.ai queue (editing)...');
+      // Use Fal.ai direct API for image editing
+      this.logger.log('Generating image using Fal.ai direct API (editing)...');
       const apiKey = this.configService.get<string>('FAL_API_KEY');
       if (!apiKey || apiKey === 'your_fal_api_key_here') {
         this.logger.warn('Fal.ai API key not set, skipping image generation');
@@ -214,16 +214,15 @@ export class ChatService {
         this.logger.log(`Base image URL received: ${baseImageUrl}`);
         const fullImageUrl = baseImageUrl;
 
-        // Submit job to Fal.ai queue
-        const submitResponse = await firstValueFrom(
+        // Direct API call to Fal.ai
+        const response = await firstValueFrom(
           this.httpService.post(
-            'https://fal.ai/api/queue/submit',
+            'https://fal.run/xai/grok-imagine-image/edit',
             {
-              endpoint_id: 'xai/grok-imagine-image/edit',
-              input: {
-                prompt,
-                image_url: fullImageUrl,
-              },
+              prompt,
+              image_url: fullImageUrl,
+              num_images: 1,
+              output_format: 'jpeg',
             },
             {
               headers: {
@@ -234,52 +233,15 @@ export class ChatService {
           ),
         );
 
-        this.logger.log(`Fal.ai submit response: ${JSON.stringify(submitResponse.data)}`);
-        const requestId = submitResponse.data.request_id || submitResponse.data.id;
-        if (!requestId) {
-          this.logger.error('No request_id found in Fal.ai submit response');
+        this.logger.log(`Fal.ai response: ${JSON.stringify(response.data)}`);
+        const imageUrl = response.data?.images?.[0]?.url;
+        if (!imageUrl) {
+          this.logger.error('No image URL found in Fal.ai response');
           return '';
         }
-        this.logger.log(`Fal.ai job submitted: ${requestId}`);
 
-        // Poll for completion
-        const maxPolls = 30; // Max 5 minutes
-        const pollInterval = 10000; // 10 seconds
-
-        for (let i = 0; i < maxPolls; i++) {
-          await new Promise(resolve => setTimeout(resolve, pollInterval));
-
-          try {
-            const statusResponse = await firstValueFrom(
-              this.httpService.get(`https://fal.ai/api/queue/status/${requestId}`, {
-                headers: {
-                  'Authorization': `Key ${apiKey}`,
-                },
-              }),
-            );
-
-            this.logger.log(`Fal.ai status: ${JSON.stringify(statusResponse.data)}`);
-            const status = statusResponse.data.status;
-
-            if (status === 'COMPLETED') {
-              const imageUrl = statusResponse.data.output?.image_url || statusResponse.data.output?.url;
-              this.logger.log(`Image edited: ${imageUrl}`);
-              if (imageUrl) {
-                const localUrl = await this.downloadAndSaveFile(imageUrl, 'image');
-                return localUrl;
-              }
-              return '';
-            } else if (status === 'FAILED') {
-              this.logger.error('Fal.ai job failed');
-              return '';
-            }
-          } catch (pollError) {
-            this.logger.error('Error polling Fal.ai', pollError);
-          }
-        }
-
-        this.logger.warn('Fal.ai timeout');
-        return '';
+        const localUrl = await this.downloadAndSaveFile(imageUrl, 'image');
+        return localUrl;
       } catch (error) {
         this.logger.error('Error calling Fal.ai API', error);
         return '';
@@ -361,7 +323,7 @@ export class ChatService {
       await this.transactionRepository.save(transaction);
     }
 
-    this.logger.log('Generating video using Fal.ai queue (test implementation)...');
+    this.logger.log('Generating video using Fal.ai direct API...');
     const apiKey = this.configService.get<string>('FAL_API_KEY');
     if (!apiKey || apiKey === 'your_fal_api_key_here') {
       this.logger.warn('Fal.ai API key not set, skipping video generation');
@@ -376,16 +338,16 @@ export class ChatService {
         return '';
       }
 
-      this.logger.log('Sending request to Fal.ai queue for video generation');
-      const submitResponse = await firstValueFrom(
+      this.logger.log('Sending request to Fal.ai direct API for video generation');
+      const response = await firstValueFrom(
         this.httpService.post(
-          'https://fal.ai/api/queue/submit',
+          'https://fal.run/fal-ai/ltx-2-19b/distilled/image-to-video',
           {
-            endpoint_id: 'fal-ai/ltx-2-19b/distilled/image-to-video',
-            input: {
-              image_url: imageUrl,
-              prompt,
-            },
+            prompt,
+            image_url: imageUrl,
+            num_frames: 121,
+            fps: 25,
+            enable_safety_checker: true,
           },
           {
             headers: {
@@ -396,52 +358,15 @@ export class ChatService {
         ),
       );
 
-      this.logger.log(`Fal.ai video submit response: ${JSON.stringify(submitResponse.data)}`);
-      const requestId = submitResponse.data.request_id || submitResponse.data.id;
-      if (!requestId) {
-        this.logger.error('No request_id found in Fal.ai video submit response');
+      this.logger.log(`Fal.ai video response: ${JSON.stringify(response.data)}`);
+      const videoUrl = response.data?.video?.url;
+      if (!videoUrl) {
+        this.logger.error('No video URL found in Fal.ai response');
         return '';
       }
-      this.logger.log(`Video generation task submitted: ${requestId}`);
 
-      // Poll for completion
-      const maxPolls = 60; // Max 10 minutes for video
-      const pollInterval = 10000; // 10 seconds
-
-      for (let i = 0; i < maxPolls; i++) {
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
-
-        try {
-          const statusResponse = await firstValueFrom(
-            this.httpService.get(`https://fal.ai/api/queue/status/${requestId}`, {
-              headers: {
-                'Authorization': `Key ${apiKey}`,
-              },
-            }),
-          );
-
-          this.logger.log(`Fal.ai video status: ${JSON.stringify(statusResponse.data)}`);
-          const status = statusResponse.data.status;
-
-          if (status === 'COMPLETED') {
-            const videoUrl = statusResponse.data.output?.video_url || statusResponse.data.output?.url;
-            this.logger.log(`Video generated: ${videoUrl}`);
-            if (videoUrl) {
-              const localUrl = await this.downloadAndSaveFile(videoUrl, 'video');
-              return localUrl;
-            }
-            return '';
-          } else if (status === 'FAILED') {
-            this.logger.error('Fal.ai video job failed');
-            return '';
-          }
-        } catch (pollError) {
-          this.logger.error('Error polling Fal.ai video', pollError);
-        }
-      }
-
-      this.logger.warn('Fal.ai video timeout');
-      return '';
+      const localUrl = await this.downloadAndSaveFile(videoUrl, 'video');
+      return localUrl;
     } catch (error) {
       this.logger.error('Error calling Fal.ai API for video', error);
       return '';
@@ -474,7 +399,7 @@ export class ChatService {
       await this.transactionRepository.save(transaction);
     }
 
-    this.logger.log('Generating video from image using Fal.ai queue (test implementation)...');
+    this.logger.log('Generating video from image using Fal.ai direct API...');
     const apiKey = this.configService.get<string>('FAL_API_KEY');
     if (!apiKey || apiKey === 'your_fal_api_key_here') {
       this.logger.warn('Fal.ai API key not set, skipping video generation');
@@ -484,16 +409,16 @@ export class ChatService {
     try {
       const fullImageUrl = imageUrl;
 
-      this.logger.log('Sending request to Fal.ai queue for video from image');
-      const submitResponse = await firstValueFrom(
+      this.logger.log('Sending request to Fal.ai direct API for video from image');
+      const response = await firstValueFrom(
         this.httpService.post(
-          'https://fal.ai/api/queue/submit',
+          'https://fal.run/fal-ai/ltx-2-19b/distilled/image-to-video',
           {
-            endpoint_id: 'fal-ai/ltx-2-19b/distilled/image-to-video',
-            input: {
-              image_url: fullImageUrl,
-              prompt: `girl says: "${text}"`,
-            },
+            prompt: `girl says: "${text}"`,
+            image_url: fullImageUrl,
+            num_frames: 121,
+            fps: 25,
+            enable_safety_checker: true,
           },
           {
             headers: {
@@ -504,52 +429,15 @@ export class ChatService {
         ),
       );
 
-      this.logger.log(`Fal.ai video from image submit response: ${JSON.stringify(submitResponse.data)}`);
-      const requestId = submitResponse.data.request_id || submitResponse.data.id;
-      if (!requestId) {
-        this.logger.error('No request_id found in Fal.ai video from image submit response');
+      this.logger.log(`Fal.ai video from image response: ${JSON.stringify(response.data)}`);
+      const videoUrl = response.data?.video?.url;
+      if (!videoUrl) {
+        this.logger.error('No video URL found in Fal.ai response');
         return '';
       }
-      this.logger.log(`Video from image generation task submitted: ${requestId}`);
 
-      // Poll for completion
-      const maxPolls = 60; // Max 10 minutes for video
-      const pollInterval = 10000; // 10 seconds
-
-      for (let i = 0; i < maxPolls; i++) {
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
-
-        try {
-          const statusResponse = await firstValueFrom(
-            this.httpService.get(`https://fal.ai/api/queue/status/${requestId}`, {
-              headers: {
-                'Authorization': `Key ${apiKey}`,
-              },
-            }),
-          );
-
-          this.logger.log(`Fal.ai video from image status: ${JSON.stringify(statusResponse.data)}`);
-          const status = statusResponse.data.status;
-
-          if (status === 'COMPLETED') {
-            const videoUrl = statusResponse.data.output?.video_url || statusResponse.data.output?.url;
-            this.logger.log(`Video from image generated: ${videoUrl}`);
-            if (videoUrl) {
-              const localUrl = await this.downloadAndSaveFile(videoUrl, 'video');
-              return localUrl;
-            }
-            return '';
-          } else if (status === 'FAILED') {
-            this.logger.error('Fal.ai video from image job failed');
-            return '';
-          }
-        } catch (pollError) {
-          this.logger.error('Error polling Fal.ai video from image', pollError);
-        }
-      }
-
-      this.logger.warn('Fal.ai video from image timeout');
-      return '';
+      const localUrl = await this.downloadAndSaveFile(videoUrl, 'video');
+      return localUrl;
     } catch (error) {
       this.logger.error('Error calling Fal.ai API for video from image', error);
       return '';
