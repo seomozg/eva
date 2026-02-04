@@ -10,7 +10,8 @@ try:
     )
     cursor = conn.cursor()
 
-    base_url = 'http://localhost:3000'  # Change to 'https://eva.test-domain.ru' for production
+    # Since images are stored on the server, use the server URL
+    base_url = 'https://eva.test-domain.ru'  # Server URL where images are accessible
 
     # Update girls avatar URLs
     cursor.execute("UPDATE girls SET \"avatarUrl\" = %s || \"avatarUrl\" WHERE \"avatarUrl\" LIKE %s", (base_url, '/uploads/%'))

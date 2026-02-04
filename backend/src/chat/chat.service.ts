@@ -507,12 +507,10 @@ export class ChatService {
       fs.writeFileSync(filePath, Buffer.from(response.data));
       this.logger.log(`Successfully saved ${type} file: ${fileName}`);
 
-      // Return full server URL
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? 'https://eva.test-domain.ru'
-        : 'http://localhost:3000';
+      // Return server URL where images are accessible
+      const baseUrl = 'https://eva.test-domain.ru'; // Server URL where images are stored
       const fullUrl = `${baseUrl}/uploads/${type === 'image' ? 'images' : 'videos'}/${fileName}`;
-      this.logger.log(`Returning full server URL: ${fullUrl}`);
+      this.logger.log(`Returning server URL: ${fullUrl}`);
       return fullUrl;
     } catch (error) {
       this.logger.error(`Error downloading and saving ${type}:`, error);
