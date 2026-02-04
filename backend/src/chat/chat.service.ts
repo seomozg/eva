@@ -200,104 +200,88 @@ export class ChatService {
       await this.transactionRepository.save(transaction);
     }
 
-    // If baseImageUrl is provided and not empty, use RunPod for editing
+    // If baseImageUrl is provided and not empty, use Fal.ai for editing (test implementation)
     if (baseImageUrl && baseImageUrl.trim() !== '') {
-      // Use RunPod for image editing
-      this.logger.log('Generating image using RunPod (editing)...');
-      const apiKey = this.configService.get<string>('RUNPOD_API_KEY');
-      if (!apiKey) {
-        this.logger.warn('RunPod API key not set, skipping image generation');
+      // Use Fal.ai queue for image editing
+      this.logger.log('Generating image using Fal.ai queue (editing)...');
+      const apiKey = this.configService.get<string>('FAL_API_KEY');
+      if (!apiKey || apiKey === 'your_fal_api_key_here') {
+        this.logger.warn('Fal.ai API key not set, skipping image generation');
         return '';
       }
 
       try {
-        // For development, use ngrok or similar tunneling service
-        // For now, if it's a local URL, we can't provide external access
-        // So we'll use the original URL if available, or skip the operation
-        let fullImageUrl = baseImageUrl;
         this.logger.log(`Base image URL received: ${baseImageUrl}`);
+        const fullImageUrl = baseImageUrl;
 
-        if (baseImageUrl && baseImageUrl.startsWith('/uploads/')) {
-          // Local URL - external APIs can't access this in development
-          // For development, you need to use ngrok or similar tunneling:
-          // 1. Install ngrok: npm install -g ngrok
-          // 2. Run: ngrok http 3000
-          // 3. Use the ngrok URL in the baseUrl below
-        const baseUrl = process.env.NODE_ENV === 'production'
-          ? 'https://eva.test-domain.ru'
-          : process.env.NGROK_URL || 'http://localhost:3000'; // Set NGROK_URL in .env
-          fullImageUrl = `${baseUrl}${baseImageUrl}`;
-
-          this.logger.warn(`Converting local URL to full URL: ${fullImageUrl}`);
-          this.logger.warn('Make sure your local server is accessible externally (use ngrok)');
-        } else {
-          this.logger.log(`Using external URL directly: ${fullImageUrl}`);
-        }
-
-        const createResponse = await firstValueFrom(
+        // Submit job to Fal.ai queue
+        const submitResponse = await firstValueFrom(
           this.httpService.post(
-            'https://api.runpod.ai/v2/seedream-v4-edit/run',
+            'https://fal.ai/api/queue/submit',
             {
+              endpoint_id: 'xai/grok-imagine-image/edit',
               input: {
                 prompt,
-                images: [fullImageUrl],
-                size: '2048*2048',
-                enable_safety_checker: false,
+                image_url: fullImageUrl,
               },
             },
             {
               headers: {
-                'Authorization': `Bearer ${apiKey}`,
+                'Authorization': `Key ${apiKey}`,
                 'Content-Type': 'application/json',
               },
             },
           ),
         );
 
-        this.logger.log(`RunPod create response: ${JSON.stringify(createResponse.data)}`);
-        const jobId = createResponse.data.id;
-        if (!jobId) {
-          this.logger.error('No jobId found in RunPod response');
+        this.logger.log(`Fal.ai submit response: ${JSON.stringify(submitResponse.data)}`);
+        const requestId = submitResponse.data.request_id || submitResponse.data.id;
+        if (!requestId) {
+          this.logger.error('No request_id found in Fal.ai submit response');
           return '';
         }
-        this.logger.log(`RunPod job created: ${jobId}`);
+        this.logger.log(`Fal.ai job submitted: ${requestId}`);
 
         // Poll for completion
-        const maxPolls = 20; // Max 5 minutes
-        const pollInterval = 3000; // 10 seconds
+        const maxPolls = 30; // Max 5 minutes
+        const pollInterval = 10000; // 10 seconds
 
         for (let i = 0; i < maxPolls; i++) {
           await new Promise(resolve => setTimeout(resolve, pollInterval));
 
           try {
             const statusResponse = await firstValueFrom(
-              this.httpService.get(`https://api.runpod.ai/v2/seedream-v4-edit/status/${jobId}`, {
+              this.httpService.get(`https://fal.ai/api/queue/status/${requestId}`, {
                 headers: {
-                  'Authorization': `Bearer ${apiKey}`,
+                  'Authorization': `Key ${apiKey}`,
                 },
               }),
             );
 
-            this.logger.log(`RunPod status: ${JSON.stringify(statusResponse.data)}`);
+            this.logger.log(`Fal.ai status: ${JSON.stringify(statusResponse.data)}`);
             const status = statusResponse.data.status;
 
             if (status === 'COMPLETED') {
-              const imageUrl = statusResponse.data.output?.result;
+              const imageUrl = statusResponse.data.output?.image_url || statusResponse.data.output?.url;
               this.logger.log(`Image edited: ${imageUrl}`);
-              return imageUrl || '';
+              if (imageUrl) {
+                const localUrl = await this.downloadAndSaveFile(imageUrl, 'image');
+                return localUrl;
+              }
+              return '';
             } else if (status === 'FAILED') {
-              this.logger.error('RunPod job failed');
+              this.logger.error('Fal.ai job failed');
               return '';
             }
           } catch (pollError) {
-            this.logger.error('Error polling RunPod', pollError);
+            this.logger.error('Error polling Fal.ai', pollError);
           }
         }
 
-        this.logger.warn('RunPod timeout');
+        this.logger.warn('Fal.ai timeout');
         return '';
       } catch (error) {
-        this.logger.error('Error calling RunPod API', error);
+        this.logger.error('Error calling Fal.ai API', error);
         return '';
       }
     } else {
@@ -377,10 +361,10 @@ export class ChatService {
       await this.transactionRepository.save(transaction);
     }
 
-    this.logger.log('Generating video using Kie.ai with wan2...');
-    const apiKey = this.configService.get<string>('KIE_API_KEY');
-    if (!apiKey || apiKey === 'your_kie_api_key_here') {
-      this.logger.warn('Kie.ai API key not set, skipping video generation');
+    this.logger.log('Generating video using Fal.ai queue (test implementation)...');
+    const apiKey = this.configService.get<string>('FAL_API_KEY');
+    if (!apiKey || apiKey === 'your_fal_api_key_here') {
+      this.logger.warn('Fal.ai API key not set, skipping video generation');
       return '';
     }
 
@@ -392,50 +376,36 @@ export class ChatService {
         return '';
       }
 
-      // Convert local URLs to full URLs for Kie.ai
-      if (imageUrl.startsWith('/uploads/')) {
-        const baseUrl = process.env.NODE_ENV === 'production'
-          ? 'https://eva.test-domain.ru'
-          : 'http://localhost:3000';
-        imageUrl = `${baseUrl}${imageUrl}`;
-      }
-
-      this.logger.log('Sending request to Kie.ai API for video with wan2');
-      const inputData = {
-        duration: APP_CONFIG.VIDEO.DURATION,
-        image_urls: [imageUrl],
-        multi_shots: APP_CONFIG.VIDEO.MULTI_SHOTS,
-        prompt,
-        resolution: APP_CONFIG.VIDEO.RESOLUTION
-      };
-      const requestData = {
-        model: 'wan/2-6-image-to-video',
-        input: JSON.stringify(inputData),
-      };
-
-      const createResponse = await firstValueFrom(
+      this.logger.log('Sending request to Fal.ai queue for video generation');
+      const submitResponse = await firstValueFrom(
         this.httpService.post(
-          'https://api.kie.ai/api/v1/jobs/createTask',
-          requestData,
+          'https://fal.ai/api/queue/submit',
+          {
+            endpoint_id: 'fal-ai/ltx-2-19b/distilled/image-to-video',
+            input: {
+              image_url: imageUrl,
+              prompt,
+            },
+          },
           {
             headers: {
-              'Authorization': `Bearer ${apiKey}`,
+              'Authorization': `Key ${apiKey}`,
               'Content-Type': 'application/json',
             },
           },
         ),
       );
 
-      this.logger.log(`Create video task response: ${JSON.stringify(createResponse.data)}`);
-      const recordId = createResponse.data.data?.recordId || createResponse.data.data?.taskId;
-      if (!recordId) {
-        this.logger.error('No recordId or taskId found in create video task response');
+      this.logger.log(`Fal.ai video submit response: ${JSON.stringify(submitResponse.data)}`);
+      const requestId = submitResponse.data.request_id || submitResponse.data.id;
+      if (!requestId) {
+        this.logger.error('No request_id found in Fal.ai video submit response');
         return '';
       }
-      this.logger.log(`Video generation task created with recordId: ${recordId}`);
+      this.logger.log(`Video generation task submitted: ${requestId}`);
 
-      // Poll for completion using recordInfo
-      const maxPolls = 30; // Max 5 minutes
+      // Poll for completion
+      const maxPolls = 60; // Max 10 minutes for video
       const pollInterval = 10000; // 10 seconds
 
       for (let i = 0; i < maxPolls; i++) {
@@ -443,50 +413,37 @@ export class ChatService {
 
         try {
           const statusResponse = await firstValueFrom(
-            this.httpService.get(`https://api.kie.ai/api/v1/jobs/recordInfo`, {
-              params: { taskId: recordId },
+            this.httpService.get(`https://fal.ai/api/queue/status/${requestId}`, {
               headers: {
-                'Authorization': `Bearer ${apiKey}`,
+                'Authorization': `Key ${apiKey}`,
               },
             }),
           );
 
-          this.logger.log(`Video status response: ${JSON.stringify(statusResponse.data)}`);
-          const taskState = statusResponse.data.data?.state;
-          this.logger.log(`Task ${recordId} status: ${taskState}`);
+          this.logger.log(`Fal.ai video status: ${JSON.stringify(statusResponse.data)}`);
+          const status = statusResponse.data.status;
 
-          if (taskState === 'success') {
-            const resultJson = statusResponse.data.data?.resultJson;
-            if (resultJson) {
-              try {
-                const result = JSON.parse(resultJson);
-                const videoUrl = result.resultUrls?.[0];
-                this.logger.log(`Video generated: ${videoUrl}`);
-                // Download and save locally
-                if (videoUrl) {
-                  const localUrl = await this.downloadAndSaveFile(videoUrl, 'video');
-                  return localUrl;
-                }
-                return '';
-              } catch (parseError) {
-                this.logger.error('Failed to parse video resultJson', parseError);
-                return '';
-              }
+          if (status === 'COMPLETED') {
+            const videoUrl = statusResponse.data.output?.video_url || statusResponse.data.output?.url;
+            this.logger.log(`Video generated: ${videoUrl}`);
+            if (videoUrl) {
+              const localUrl = await this.downloadAndSaveFile(videoUrl, 'video');
+              return localUrl;
             }
             return '';
-          } else if (taskState === 'fail') {
-            this.logger.error(`Video generation failed for task ${recordId}`);
+          } else if (status === 'FAILED') {
+            this.logger.error('Fal.ai video job failed');
             return '';
           }
         } catch (pollError) {
-          this.logger.error(`Error polling video task ${recordId}`, pollError);
+          this.logger.error('Error polling Fal.ai video', pollError);
         }
       }
 
-      this.logger.warn(`Video generation timeout for task ${recordId}`);
+      this.logger.warn('Fal.ai video timeout');
       return '';
     } catch (error) {
-      this.logger.error('Error calling Kie.ai API for video', error);
+      this.logger.error('Error calling Fal.ai API for video', error);
       return '';
     }
   }
@@ -517,59 +474,46 @@ export class ChatService {
       await this.transactionRepository.save(transaction);
     }
 
-    this.logger.log('Generating video from image using Kie.ai with wan2...');
-    const apiKey = this.configService.get<string>('KIE_API_KEY');
-    if (!apiKey || apiKey === 'your_kie_api_key_here') {
-      this.logger.warn('Kie.ai API key not set, skipping video generation');
+    this.logger.log('Generating video from image using Fal.ai queue (test implementation)...');
+    const apiKey = this.configService.get<string>('FAL_API_KEY');
+    if (!apiKey || apiKey === 'your_fal_api_key_here') {
+      this.logger.warn('Fal.ai API key not set, skipping video generation');
       return '';
     }
 
     try {
-      // Convert local URLs to full URLs for Kie.ai
-      let fullImageUrl = imageUrl;
-      if (imageUrl.startsWith('/uploads/')) {
-        const baseUrl = process.env.NODE_ENV === 'production'
-          ? 'https://eva.test-domain.ru'
-          : 'http://localhost:3000';
-        fullImageUrl = `${baseUrl}${imageUrl}`;
-      }
+      const fullImageUrl = imageUrl;
 
-      this.logger.log('Sending request to Kie.ai API for video from image with wan2');
-      const inputData = {
-        duration: APP_CONFIG.VIDEO.DURATION,
-        image_urls: [fullImageUrl],
-        multi_shots: APP_CONFIG.VIDEO.MULTI_SHOTS,
-        prompt: `girl says: "${text}"`,
-        resolution: APP_CONFIG.VIDEO.RESOLUTION
-      };
-      const requestData = {
-        model: 'wan/2-6-image-to-video',
-        input: JSON.stringify(inputData),
-      };
-
-      const createResponse = await firstValueFrom(
+      this.logger.log('Sending request to Fal.ai queue for video from image');
+      const submitResponse = await firstValueFrom(
         this.httpService.post(
-          'https://api.kie.ai/api/v1/jobs/createTask',
-          requestData,
+          'https://fal.ai/api/queue/submit',
+          {
+            endpoint_id: 'fal-ai/ltx-2-19b/distilled/image-to-video',
+            input: {
+              image_url: fullImageUrl,
+              prompt: `girl says: "${text}"`,
+            },
+          },
           {
             headers: {
-              'Authorization': `Bearer ${apiKey}`,
+              'Authorization': `Key ${apiKey}`,
               'Content-Type': 'application/json',
             },
           },
         ),
       );
 
-      this.logger.log(`Create video from image task response: ${JSON.stringify(createResponse.data)}`);
-      const recordId = createResponse.data.data?.recordId || createResponse.data.data?.taskId;
-      if (!recordId) {
-        this.logger.error('No recordId or taskId found in create video from image task response');
+      this.logger.log(`Fal.ai video from image submit response: ${JSON.stringify(submitResponse.data)}`);
+      const requestId = submitResponse.data.request_id || submitResponse.data.id;
+      if (!requestId) {
+        this.logger.error('No request_id found in Fal.ai video from image submit response');
         return '';
       }
-      this.logger.log(`Video from image generation task created with recordId: ${recordId}`);
+      this.logger.log(`Video from image generation task submitted: ${requestId}`);
 
-      // Poll for completion using recordInfo
-      const maxPolls = 30; // Max 5 minutes
+      // Poll for completion
+      const maxPolls = 60; // Max 10 minutes for video
       const pollInterval = 10000; // 10 seconds
 
       for (let i = 0; i < maxPolls; i++) {
@@ -577,50 +521,37 @@ export class ChatService {
 
         try {
           const statusResponse = await firstValueFrom(
-            this.httpService.get(`https://api.kie.ai/api/v1/jobs/recordInfo`, {
-              params: { taskId: recordId },
+            this.httpService.get(`https://fal.ai/api/queue/status/${requestId}`, {
               headers: {
-                'Authorization': `Bearer ${apiKey}`,
+                'Authorization': `Key ${apiKey}`,
               },
             }),
           );
 
-          this.logger.log(`Video from image status response: ${JSON.stringify(statusResponse.data)}`);
-          const taskState = statusResponse.data.data?.state;
-          this.logger.log(`Task ${recordId} status: ${taskState}`);
+          this.logger.log(`Fal.ai video from image status: ${JSON.stringify(statusResponse.data)}`);
+          const status = statusResponse.data.status;
 
-          if (taskState === 'success') {
-            const resultJson = statusResponse.data.data?.resultJson;
-            if (resultJson) {
-              try {
-                const result = JSON.parse(resultJson);
-                const videoUrl = result.resultUrls?.[0];
-                this.logger.log(`Video from image generated: ${videoUrl}`);
-                // Download and save locally
-                if (videoUrl) {
-                  const localUrl = await this.downloadAndSaveFile(videoUrl, 'video');
-                  return localUrl;
-                }
-                return '';
-              } catch (parseError) {
-                this.logger.error('Failed to parse video from image resultJson', parseError);
-                return '';
-              }
+          if (status === 'COMPLETED') {
+            const videoUrl = statusResponse.data.output?.video_url || statusResponse.data.output?.url;
+            this.logger.log(`Video from image generated: ${videoUrl}`);
+            if (videoUrl) {
+              const localUrl = await this.downloadAndSaveFile(videoUrl, 'video');
+              return localUrl;
             }
             return '';
-          } else if (taskState === 'fail') {
-            this.logger.error(`Video from image generation failed for task ${recordId}`);
+          } else if (status === 'FAILED') {
+            this.logger.error('Fal.ai video from image job failed');
             return '';
           }
         } catch (pollError) {
-          this.logger.error(`Error polling video from image task ${recordId}`, pollError);
+          this.logger.error('Error polling Fal.ai video from image', pollError);
         }
       }
 
-      this.logger.warn(`Video from image generation timeout for task ${recordId}`);
+      this.logger.warn('Fal.ai video from image timeout');
       return '';
     } catch (error) {
-      this.logger.error('Error calling Kie.ai API for video from image', error);
+      this.logger.error('Error calling Fal.ai API for video from image', error);
       return '';
     }
   }
