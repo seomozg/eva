@@ -88,11 +88,19 @@ export class UsersService {
   }
 
   async getGirls(userId: string): Promise<Girl[]> {
-    return this.girlRepository.find({
+    const girls = await this.girlRepository.find({
       where: { userId, isActive: true },
       order: { createdAt: 'DESC' },
       select: ['id', 'name', 'appearance', 'personality', 'avatarUrl', 'originalAvatarUrl', 'createdAt'], // Include originalAvatarUrl
     });
+
+    // Convert local URLs to server URLs
+    const baseUrl = 'https://eva.test-domain.ru';
+    return girls.map(girl => ({
+      ...girl,
+      avatarUrl: girl.avatarUrl?.startsWith('/uploads/') ? `${baseUrl}${girl.avatarUrl}` : girl.avatarUrl,
+      originalAvatarUrl: girl.originalAvatarUrl?.startsWith('/uploads/') ? `${baseUrl}${girl.originalAvatarUrl}` : girl.originalAvatarUrl,
+    }));
   }
 
   async updateGirl(userId: string, girlId: string, updateData: { appearance?: string; personality?: string; avatarUrl?: string }): Promise<Girl> {
