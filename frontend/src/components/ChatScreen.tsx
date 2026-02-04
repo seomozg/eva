@@ -233,6 +233,26 @@ const ChatScreen = () => {
       if (!currentGirl) {
         const savedGirl = localStorage.getItem('currentGirl');
         if (savedGirl) {
+          let girlData = JSON.parse(savedGirl);
+
+          // Check if avatar URL is still local (needs updating)
+          if (girlData.avatarUrl && girlData.avatarUrl.startsWith('/uploads/')) {
+            console.log('Detected old local avatar URL, refreshing girl data from server...');
+            try {
+              // Fetch fresh girl data from backend
+              const freshGirls = await usersAPI.getGirls();
+              const freshGirl = freshGirls.find(g => g.id === girlData.id);
+              if (freshGirl) {
+                console.log('Updated girl data with server URLs:', freshGirl.avatarUrl);
+                localStorage.setItem('currentGirl', JSON.stringify(freshGirl));
+                girlData = freshGirl;
+              }
+            } catch (error) {
+              console.error('Error refreshing girl data:', error);
+            }
+          }
+
+          setCurrentGirl(girlData);
           loadGirl();
         } else {
           // No girl selected, show message to create one
