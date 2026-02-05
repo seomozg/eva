@@ -217,7 +217,7 @@ export class ChatService {
         // Direct API call to Fal.ai
         const response = await firstValueFrom(
           this.httpService.post(
-            'https://fal.run/xai/grok-imagine-image/edit',
+            'https://fal.run/fal-ai/flux-2/turbo/edit',
             {
               prompt,
               image_url: fullImageUrl,
