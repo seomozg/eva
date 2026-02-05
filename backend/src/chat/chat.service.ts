@@ -219,10 +219,9 @@ export class ChatService {
           this.httpService.post(
             'https://fal.run/fal-ai/flux-2/turbo/edit',
             {
-              prompt,
-              image_url: fullImageUrl,
-              num_images: 1,
-              output_format: 'jpeg',
+              prompt : prompt,
+              image_urls: [fullImageUrl],
+              enable_safety_checker: false
             },
             {
               headers: {
