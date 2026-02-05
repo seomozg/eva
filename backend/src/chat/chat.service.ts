@@ -217,10 +217,10 @@ export class ChatService {
         // Direct API call to Fal.ai
         const response = await firstValueFrom(
           this.httpService.post(
-            'https://fal.run/fal-ai/flux-2/turbo/edit',
+            'https://fal.run/fal-ai/fast-lcm-diffusion/image-to-image',
             {
               prompt : prompt,
-              image_urls: [fullImageUrl],
+              image_url: fullImageUrl,
               enable_safety_checker: false
             },
             {
