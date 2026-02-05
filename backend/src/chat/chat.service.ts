@@ -217,10 +217,10 @@ export class ChatService {
         // Direct API call to Fal.ai
         const response = await firstValueFrom(
           this.httpService.post(
-            'https://fal.run/fal-ai/fast-lcm-diffusion/image-to-image',
+            'https://fal.run/fal-ai/bytedance/seedream/v4/edit',
             {
-              prompt : prompt,
-              image_url: fullImageUrl,
+              prompt,
+              image_urls: [fullImageUrl],
               enable_safety_checker: false
             },
             {
