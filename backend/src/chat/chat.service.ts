@@ -212,7 +212,7 @@ export class ChatService {
 
       try {
         this.logger.log(`Base image URL received: ${baseImageUrl}`);
-        const fullImageUrl = baseImageUrl;
+        const fullImageUrl = baseImageUrl.startsWith('/') ? this.getPublicUrl(baseImageUrl) : baseImageUrl;
 
         // Direct API call to Fal.ai
         const response = await firstValueFrom(
@@ -220,6 +220,7 @@ export class ChatService {
             'https://fal.run/fal-ai/bytedance/seedream/v5/lite/edit',
             {
               prompt,
+              image_size: 'auto_2K',
               image_urls: [fullImageUrl],
               enable_safety_checker: false
             },
