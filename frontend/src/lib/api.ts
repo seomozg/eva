@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: process.env.NODE_ENV === 'production'
-    ? 'https://eva.test-domain.ru'
+    ? '' // Use relative URLs in production (nginx proxies to backend)
     : 'http://localhost:3000', // Development fallback
 });
 
@@ -46,7 +46,7 @@ export const getImageUrl = (path: string): string => {
 
   // Otherwise, prepend the base URL
   if (process.env.NODE_ENV === 'production') {
-    return `https://eva.test-domain.ru${path}`;
+    return path; // nginx proxies /uploads/ and /api/ to backend
   }
   return `http://localhost:3000${path}`;
 };

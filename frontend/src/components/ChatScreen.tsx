@@ -167,7 +167,7 @@ const ChatScreen = () => {
                   type: msg.mediaType === 'image' ? 'image' : msg.mediaType === 'video' ? 'video' : 'text',
                   sender: msg.role === 'user' ? 'user' : 'her',
                   content: msg.content,
-                  mediaUrl: process.env.NODE_ENV === 'production' ? msg.mediaUrl : (msg.originalMediaUrl || msg.mediaUrl),
+                  mediaUrl: msg.mediaUrl,
                   mediaType: msg.mediaType,
                   thumbnailUrl: msg.thumbnailUrl ? (msg.thumbnailUrl.startsWith('http') ? msg.thumbnailUrl : getImageUrl(msg.thumbnailUrl)) : undefined,
                   timestamp: new Date(msg.createdAt),
@@ -431,9 +431,7 @@ const ChatScreen = () => {
 
         // Stream the response
         const apiMessages = [systemPrompt, ...conversationHistory, { role: 'user' as const, content }];
-        const streamUrl = process.env.NODE_ENV === 'production'
-          ? 'https://eva.test-domain.ru'
-          : 'http://localhost:3000';
+        const streamUrl = '';
         const eventSource = new EventSource(`${streamUrl}/chat/send-stream?messages=${encodeURIComponent(JSON.stringify(apiMessages))}`);
         let lastChunkTime = Date.now();
 

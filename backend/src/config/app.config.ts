@@ -19,7 +19,7 @@ export const APP_CONFIG = {
 
   // OAuth
   OAUTH: {
-    GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || 'https://eva.test-domain.ru/auth/google/callback',
+    GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/auth/google/callback',
   },
 
   // Prompts

@@ -94,12 +94,11 @@ export class UsersService {
       select: ['id', 'name', 'appearance', 'personality', 'avatarUrl', 'originalAvatarUrl', 'createdAt'], // Include originalAvatarUrl
     });
 
-    // Convert local URLs to server URLs (only if they are still local)
-    const baseUrl = 'https://eva.test-domain.ru';
+    // Return relative URLs — frontend nginx proxies /uploads/ to backend
     return girls.map(girl => ({
       ...girl,
-      avatarUrl: girl.avatarUrl?.startsWith('/uploads/') ? `${baseUrl}${girl.avatarUrl}` : girl.avatarUrl,
-      originalAvatarUrl: girl.originalAvatarUrl?.startsWith('/uploads/') ? `${baseUrl}${girl.originalAvatarUrl}` : girl.originalAvatarUrl,
+      avatarUrl: girl.avatarUrl,
+      originalAvatarUrl: girl.originalAvatarUrl,
     }));
   }
 

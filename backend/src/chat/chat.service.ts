@@ -217,7 +217,7 @@ export class ChatService {
         // Direct API call to Fal.ai
         const response = await firstValueFrom(
           this.httpService.post(
-            'https://fal.run/fal-ai/bytedance/seedream/v4/edit',
+            'https://fal.run/fal-ai/bytedance/seedream/v5/lite/edit',
             {
               prompt,
               image_urls: [fullImageUrl],
@@ -338,12 +338,13 @@ export class ChatService {
       }
 
       this.logger.log('Sending request to Fal.ai direct API for video generation');
+      const fullImageUrl = imageUrl.startsWith('/') ? this.getPublicUrl(imageUrl) : imageUrl;
       const response = await firstValueFrom(
         this.httpService.post(
-          'https://fal.run/fal-ai/ltx-2-19b/distilled/image-to-video',
+          'https://fal.run/fal-ai/ltx-2.3-22b/distilled/image-to-video',
           {
             prompt,
-            image_url: imageUrl,
+            image_url: fullImageUrl,
             num_frames: 121,
             fps: 25,
             enable_safety_checker: false,
@@ -406,12 +407,12 @@ export class ChatService {
     }
 
     try {
-      const fullImageUrl = imageUrl;
+      const fullImageUrl = imageUrl.startsWith('/') ? this.getPublicUrl(imageUrl) : imageUrl;
 
       this.logger.log('Sending request to Fal.ai direct API for video from image');
       const response = await firstValueFrom(
         this.httpService.post(
-          'https://fal.run/fal-ai/ltx-2-19b/distilled/image-to-video',
+          'https://fal.run/fal-ai/ltx-2.3-22b/distilled/image-to-video',
           {
             prompt: `girl says: "${text}"`,
             image_url: fullImageUrl,
@@ -506,9 +507,8 @@ export class ChatService {
       fs.writeFileSync(filePath, Buffer.from(response.data));
       this.logger.log(`Successfully saved ${type} file: ${fileName}`);
 
-      // Return server URL where images are accessible
-      const baseUrl = 'https://eva.test-domain.ru'; // Server URL where images are stored
-      const fullUrl = `${baseUrl}/uploads/${type === 'image' ? 'images' : 'videos'}/${fileName}`;
+      // Return relative URL — frontend nginx proxies /uploads/ to backend
+      const fullUrl = `/uploads/${type === 'image' ? 'images' : 'videos'}/${fileName}`;
       this.logger.log(`Returning server URL: ${fullUrl}`);
       return fullUrl;
     } catch (error) {
@@ -545,6 +545,11 @@ export class ChatService {
       personality,
       firstMessage
     };
+  }
+
+  private getPublicUrl(relativeUrl: string): string {
+    const baseUrl = this.configService.get<string>('PUBLIC_URL') || 'http://localhost:3000';
+    return `${baseUrl}${relativeUrl}`;
   }
 
   private generateRandomFemaleName(): string {

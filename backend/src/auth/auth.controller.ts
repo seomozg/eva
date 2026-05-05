@@ -42,7 +42,7 @@ export class AuthController {
 
       // Return HTML page that saves token and redirects
       const redirectUrl = process.env.NODE_ENV === 'production'
-        ? 'https://eva.test-domain.ru/dashboard'
+        ? '/dashboard'
         : 'http://localhost:5173/dashboard';
 
       res.send(`
@@ -64,7 +64,7 @@ export class AuthController {
       `);
     } catch (error) {
       const loginUrl = process.env.NODE_ENV === 'production'
-        ? 'https://eva.test-domain.ru/login'
+        ? '/login'
         : 'http://localhost:5173/login';
 
       res.send(`
