@@ -36,7 +36,9 @@ services:
     volumes:
       - eva_prod_uploads:/app/uploads
     networks:
-      - eva_prod_app_network
+      eva_prod_app_network:
+        aliases:
+          - backend
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:3000/health || exit 1"]
