@@ -217,7 +217,7 @@ export class ChatService {
         // Direct API call to Fal.ai
         const response = await firstValueFrom(
           this.httpService.post(
-            'https://fal.run/fal-ai/bytedance/seedream/v5/lite/edit',
+            'https://fal.run/fal-ai/bytedance/seedream/v4.5/edit',
             {
               prompt,
               image_size: 'auto_2K',
