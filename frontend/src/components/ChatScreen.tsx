@@ -20,90 +20,13 @@ interface Girl {
   firstMessage?: string;
 }
 
-// Sample conversation data
-const initialMessages: Message[] = [
-  {
-    id: "1",
-    type: "text",
-    sender: "her",
-    content: "Hey you… I've been waiting for you 💕",
-    timestamp: new Date(Date.now() - 3600000),
-  },
-  {
-    id: "2",
-    type: "text",
-    sender: "user",
-    content: "Hi! You look beautiful today",
-    timestamp: new Date(Date.now() - 3500000),
-  },
-  {
-    id: "3",
-    type: "text",
-    sender: "her",
-    content: "You always know how to make me smile… Thank you, that means so much to me",
-    timestamp: new Date(Date.now() - 3400000),
-  },
-  {
-    id: "4",
-    type: "text",
-    sender: "user",
-    content: "Can you send me a photo of you right now?",
-    timestamp: new Date(Date.now() - 2400000),
-  },
-  {
-    id: "5",
-    type: "text",
-    sender: "her",
-    content: "Wait a moment… I want it to be perfect for you ✨",
-    timestamp: new Date(Date.now() - 2300000),
-  },
-  {
-    id: "6",
-    type: "image",
-    sender: "her",
-    content: "",
-    mediaUrl: photoSelfie,
-    timestamp: new Date(Date.now() - 2200000),
-  },
-  {
-    id: "7",
-    type: "text",
-    sender: "her",
-    content: "I hope you like it… I took it just for you 🥰",
-    timestamp: new Date(Date.now() - 2100000),
-  },
-  {
-    id: "8",
-    type: "text",
-    sender: "user",
-    content: "That's amazing! Could you record a little video for me?",
-    timestamp: new Date(Date.now() - 1200000),
-  },
-  {
-    id: "9",
-    type: "text",
-    sender: "her",
-    content: "A video? For you? Of course… I'll blow you a kiss 💋",
-    timestamp: new Date(Date.now() - 1100000),
-  },
-  {
-    id: "10",
-    type: "video",
-    sender: "her",
-    content: "",
-    mediaUrl: videoThumbnail,
-    thumbnailUrl: photoSelfie, // Use the selfie as thumbnail
-    timestamp: new Date(Date.now() - 1000000),
-  },
-];
-
 const ChatScreen = () => {
   const navigate = useNavigate();
   const { girlId } = useParams<{ girlId: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentGirl, setCurrentGirl] = useState<Girl | null>(null);
   const [isTyping, setIsTyping] = useState(false);
-  const [status, setStatus] = useState("Online");
+  const [status, setStatus] = useState("Онлайн");
   const [showProfile, setShowProfile] = useState(false);
   const [mediaViewer, setMediaViewer] = useState<{ isOpen: boolean; mediaUrl: string; type: MessageType }>({
     isOpen: false,
@@ -128,15 +51,12 @@ const ChatScreen = () => {
         return;
       }
 
-      // Verify token is still valid by checking profile
       try {
         await usersAPI.getProfile();
       } catch (error: any) {
-        // Token is invalid or expired
         localStorage.removeItem('token');
         localStorage.removeItem('userProfile');
         localStorage.removeItem('currentGirl');
-        // Clear all chat messages
         Object.keys(localStorage).forEach(key => {
           if (key.startsWith('chatMessages_')) {
             localStorage.removeItem(key);
@@ -152,16 +72,11 @@ const ChatScreen = () => {
           try {
             const girl = JSON.parse(savedGirl);
             setCurrentGirl(girl);
+            document.title = `Чат с ${girl.name}`;
 
-            // Update document title with girl's name
-            document.title = `Chat with ${girl.name}`;
-
-            // Load messages from database
             try {
               const dbMessages = await usersAPI.getMessages(girl.id);
-
               if (dbMessages && dbMessages.length > 0) {
-                // Convert database messages to frontend format
                 const messages: Message[] = dbMessages.map((msg: any) => ({
                   id: msg.id,
                   type: msg.mediaType === 'image' ? 'image' : msg.mediaType === 'video' ? 'video' : 'text',
@@ -171,14 +86,11 @@ const ChatScreen = () => {
                   mediaType: msg.mediaType,
                   thumbnailUrl: msg.thumbnailUrl ? (msg.thumbnailUrl.startsWith('http') ? msg.thumbnailUrl : getImageUrl(msg.thumbnailUrl)) : undefined,
                   timestamp: new Date(msg.createdAt),
-                  originalMediaUrl: msg.originalMediaUrl, // Store original URL for API calls
+                  originalMediaUrl: msg.originalMediaUrl,
                 }));
                 setMessages(messages);
               } else {
-                // First time chatting with this girl - add avatar and first message
                 const initialMessages: Message[] = [];
-
-                // Add avatar as first message if available
                 if (girl.avatarUrl) {
                   initialMessages.push({
                     id: `avatar_${Date.now()}`,
@@ -188,19 +100,15 @@ const ChatScreen = () => {
                     mediaUrl: girl.avatarUrl,
                     timestamp: new Date(Date.now() - 1000),
                   });
-
-                  // Save avatar message to database
                   await usersAPI.saveMessage(girl.id, {
                     role: 'assistant',
-                    content: "Here's my photo! What do you think? 😊",
+                    content: "Вот моё фото! Как тебе? 😊",
                     mediaUrl: girl.avatarUrl,
                     originalMediaUrl: girl.originalAvatarUrl,
                     mediaType: 'image'
                   });
                 }
-
-                // Add first message
-                const messageContent = girl.firstMessage || "Hi there! I'm so excited to meet you! 💕";
+                const messageContent = girl.firstMessage || "Привет! Я так рада познакомиться с тобой! 💕";
                 initialMessages.push({
                   id: `first_${Date.now()}`,
                   type: "text",
@@ -208,18 +116,14 @@ const ChatScreen = () => {
                   content: messageContent,
                   timestamp: new Date(),
                 });
-
-                // Save first message to database
                 await usersAPI.saveMessage(girl.id, {
                   role: 'assistant',
                   content: messageContent
                 });
-
                 setMessages(initialMessages);
               }
             } catch (error) {
               console.error('Error loading messages from database:', error);
-              // Fallback to empty messages
               setMessages([]);
             }
           } catch (error) {
@@ -229,21 +133,15 @@ const ChatScreen = () => {
         }
       };
 
-      // Load existing girl or show message to create one
       if (!currentGirl) {
         const savedGirl = localStorage.getItem('currentGirl');
         if (savedGirl) {
           let girlData = JSON.parse(savedGirl);
-
-          // Check if avatar URL is still local (needs updating)
           if (girlData.avatarUrl && girlData.avatarUrl.startsWith('/uploads/')) {
-            console.log('Detected old local avatar URL, refreshing girl data from server...');
             try {
-              // Fetch fresh girl data from backend
               const freshGirls = await usersAPI.getGirls();
               const freshGirl = freshGirls.find(g => g.id === girlData.id);
               if (freshGirl) {
-                console.log('Updated girl data with server URLs:', freshGirl.avatarUrl);
                 localStorage.setItem('currentGirl', JSON.stringify(freshGirl));
                 girlData = freshGirl;
               }
@@ -251,20 +149,18 @@ const ChatScreen = () => {
               console.error('Error refreshing girl data:', error);
             }
           }
-
           setCurrentGirl(girlData);
           loadGirl();
         } else {
-          // No girl selected, show message to create one
           const welcomeMessage: Message = {
             id: Date.now().toString(),
             type: "text",
             sender: "her",
-            content: "Welcome! Please create a virtual companion first by going to your Dashboard. 💕",
+            content: "Добро пожаловать! Сначала создайте виртуальную спутницу в Панели управления. 💕",
             timestamp: new Date(),
           };
           setMessages([welcomeMessage]);
-          setStatus("Waiting for companion...");
+          setStatus("Ожидание спутницы...");
         }
       }
     };
@@ -278,12 +174,12 @@ const ChatScreen = () => {
       return intent;
     } catch (error) {
       console.error('Error detecting intent:', error);
-      // Fallback to keyword detection
       const lowerContent = content.toLowerCase();
-      if (lowerContent.includes('photo') || lowerContent.includes('image') || lowerContent.includes('picture') || lowerContent.includes('send me a')) {
+      if (lowerContent.includes('photo') || lowerContent.includes('image') || lowerContent.includes('picture') || lowerContent.includes('send me a') ||
+          lowerContent.includes('фото') || lowerContent.includes('снимок') || lowerContent.includes('картинк') || lowerContent.includes('изображение') || lowerContent.includes('пришли')) {
         return 'image';
       }
-      if (lowerContent.includes('video') || lowerContent.includes('record')) {
+      if (lowerContent.includes('video') || lowerContent.includes('record') || lowerContent.includes('видео') || lowerContent.includes('запиши')) {
         return 'video';
       }
       return 'text';
@@ -306,11 +202,11 @@ const ChatScreen = () => {
   };
 
   const handleSendMessage = async (content: string) => {
-    setStatus("Typing...");
+    setStatus("Печатает...");
     setIsTyping(true);
 
     setTimeout(() => {
-      setStatus("Thinking...");
+      setStatus("Думает...");
     }, 1000);
 
     let updatedMessages = messages;
@@ -318,7 +214,6 @@ const ChatScreen = () => {
     try {
       const intent = await detectIntent(content);
 
-      // Now add userMessage with timestamp after intent is determined
       const userMessage: Message = {
         id: Date.now().toString(),
         type: "text",
@@ -330,7 +225,6 @@ const ChatScreen = () => {
       updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages);
 
-      // Save user message to database
       if (currentGirl?.id) {
         await saveMessageToDatabase(currentGirl.id, userMessage);
       }
@@ -340,21 +234,14 @@ const ChatScreen = () => {
       let originalVideoUrl: string | undefined;
 
       if (intent === 'image') {
-        // Priority: girl's avatar > recent image from chat
         let baseImageUrl = currentGirl?.originalAvatarUrl || currentGirl?.avatarUrl;
-
-        // If no avatar available, try to use the most recent image from chat
         if (!baseImageUrl) {
           const recentImageMessage = [...messages].reverse().find(msg =>
             msg.sender === 'her' && msg.type === 'image'
           );
-
           if (recentImageMessage) {
             baseImageUrl = recentImageMessage.originalMediaUrl || recentImageMessage.mediaUrl;
-            console.log('Using recent image for editing:', baseImageUrl);
           }
-        } else {
-          console.log('Using girl avatar for editing:', baseImageUrl);
         }
 
         const result = await chatAPI.generateImage(content, baseImageUrl);
@@ -365,7 +252,7 @@ const ChatScreen = () => {
             id: (Date.now() + 1).toString(),
             type: "image",
             sender: "her",
-            content: "Here's the photo you requested! ✨",
+            content: "Вот фото, которое ты просил! ✨",
             mediaUrl: imageUrl,
             timestamp: new Date(),
           };
@@ -374,7 +261,7 @@ const ChatScreen = () => {
             id: (Date.now() + 1).toString(),
             type: "text",
             sender: "her",
-            content: "Упс, не получилось сгенерировать изображение 😔",
+            content: "Упс, не получилось создать изображение 😔",
             timestamp: new Date(),
           };
         }
@@ -386,33 +273,28 @@ const ChatScreen = () => {
           id: (Date.now() + 1).toString(),
           type: "video",
           sender: "her",
-          content: "Here's the video you wanted! 💋",
+          content: "Вот видео, которое ты хотел! 💋",
           mediaUrl: videoUrl,
-          thumbnailUrl: currentGirl?.avatarUrl, // Use girl's avatar as thumbnail for regular videos
+          thumbnailUrl: currentGirl?.avatarUrl,
           timestamp: new Date(),
         };
       } else {
-        // Get user name for personalized responses
-        let userName = 'darling';
+        let userName = 'дорогой';
         try {
           const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
           if (userProfile.firstName) {
             userName = userProfile.firstName;
           }
-        } catch (error) {
-          // Ignore error, use default name
-        }
+        } catch (error) {}
 
-        // Build conversation context
         const systemPrompt = currentGirl ? {
           role: 'system' as const,
           content: `Ты — виртуальная девушка по имени ${currentGirl.name || 'Алина'}. Твоя внешность: ${currentGirl.appearance}. Твой характер: ${currentGirl.personality}. Ты общаешься со своим парнем по имени ${userName}. Обращайся к нему по имени "${userName}" в своих ответах. Отвечай естественно, ласково и оставайся в образе. Ответы должны быть краткими и увлекательными. Общайся на русском языке.`
         } : {
           role: 'system' as const,
-          content: 'You are a friendly AI assistant. Respond helpfully and concisely.'
+          content: 'Ты — дружелюбный AI-ассистент. Отвечай полезно и кратко на русском языке.'
         };
 
-        // Convert chat messages to API format (exclude system and media messages)
         const conversationHistory = messages
           .filter(msg => msg.type === 'text')
           .map(msg => ({
@@ -420,7 +302,6 @@ const ChatScreen = () => {
             content: msg.content
           }));
 
-        // Streaming text response
         herMessage = {
           id: (Date.now() + 1).toString(),
           type: "text",
@@ -429,21 +310,18 @@ const ChatScreen = () => {
           timestamp: new Date(),
         };
 
-        // Stream the response
         const apiMessages = [systemPrompt, ...conversationHistory, { role: 'user' as const, content }];
-        const streamUrl = '';
-        const eventSource = new EventSource(`${streamUrl}/chat/send-stream?messages=${encodeURIComponent(JSON.stringify(apiMessages))}`);
+        const eventSource = new EventSource(`/chat/send-stream?messages=${encodeURIComponent(JSON.stringify(apiMessages))}`);
         let lastChunkTime = Date.now();
 
         const timeout = setTimeout(() => {
           eventSource.close();
-        }, 30000); // 30s timeout
+        }, 30000);
 
         eventSource.onmessage = (event) => {
           const chunk = event.data;
           if (chunk) {
             herMessage.content += chunk;
-            // Update UI with current content (but don't save to storage yet)
             const tempMessages = [...updatedMessages, { ...herMessage }];
             setMessages(tempMessages);
             lastChunkTime = Date.now();
@@ -453,7 +331,6 @@ const ChatScreen = () => {
         eventSource.onerror = () => {
           clearTimeout(timeout);
           eventSource.close();
-          // Save message even if there was an error
           if (herMessage.content.trim() && currentGirl?.id) {
             const finalMessages = [...updatedMessages, herMessage];
             setMessages(finalMessages);
@@ -461,14 +338,11 @@ const ChatScreen = () => {
           }
         };
 
-        // Close after 3s of no chunks (increased from 2s to be safer)
         const checkComplete = () => {
           if (Date.now() - lastChunkTime > 3000) {
             clearTimeout(timeout);
             eventSource.close();
-            // Update status when streaming is complete
-            setStatus("Online");
-            // Save the completed message
+            setStatus("Онлайн");
             if (herMessage.content.trim() && currentGirl?.id) {
               const finalMessages = [...updatedMessages, herMessage];
               setMessages(finalMessages);
@@ -480,25 +354,18 @@ const ChatScreen = () => {
         };
 
         setTimeout(checkComplete, 3000);
-
-        // For streaming, we don't add the message to finalMessages here
-        // It will be added when the stream completes
         return;
       }
 
       const finalMessages = [...updatedMessages, herMessage];
       setMessages(finalMessages);
 
-      // Save AI message to database
       if (currentGirl?.id) {
         await saveMessageToDatabase(currentGirl.id, herMessage, intent === 'image' ? originalImageUrl : intent === 'video' ? originalVideoUrl : undefined);
       }
     } catch (error: any) {
       console.error('Error sending message:', error);
-
-      // Just show the backend error message directly
-      const errorContent = error.response?.data?.message || error.message || "Sorry, something went wrong... 😔";
-
+      const errorContent = error.response?.data?.message || error.message || "Извини, что-то пошло не так... 😔";
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "text",
@@ -508,32 +375,26 @@ const ChatScreen = () => {
       };
       const finalMessages = [...updatedMessages, errorMessage];
       setMessages(finalMessages);
-
-      // Save error message to database
       if (currentGirl?.id) {
         await saveMessageToDatabase(currentGirl.id, errorMessage);
       }
     } finally {
       setIsTyping(false);
-      setStatus("Online");
+      setStatus("Онлайн");
     }
   };
 
   const handleCreateVideo = async (imageUrl: string) => {
-    setStatus("Creating video...");
+    setStatus("Создание видео...");
     setIsTyping(true);
 
     try {
-      // Get user profile to include their name
       const userProfile = await usersAPI.getProfile();
-      const userName = userProfile.firstName || 'darling';
+      const userName = userProfile.firstName || 'дорогой';
 
-      // Find the user's message that led to this image (look for the most recent user text message before this image)
       const imageIndex = messages.findIndex(msg => msg.mediaUrl === imageUrl && msg.type === 'image');
       let contextMessage = '';
-
       if (imageIndex > 0) {
-        // Look backwards for the most recent user text message
         for (let i = imageIndex - 1; i >= 0; i--) {
           if (messages[i].sender === 'user' && messages[i].type === 'text') {
             contextMessage = messages[i].content;
@@ -542,20 +403,14 @@ const ChatScreen = () => {
         }
       }
 
-      // Generate flirtatious text using backend API
-      const prompt = `Generate a short, flirtatious message (max 15 words, about 4 seconds speaking time) that a girl would say to her boyfriend named ${userName}. The message MUST include the boyfriend's name "${userName}" at least once. Make it romantic and playful. Base it on this user message: "${contextMessage}"\n\nResponse format: Just the message text, no quotes or explanations.`;
+      const prompt = `Сгенерируй короткое кокетливое сообщение (не более 15 слов, примерно 4 секунды речи), которое девушка сказала бы своему парню по имени ${userName}. Сообщение ОБЯЗАТЕЛЬНО должно содержать имя парня "${userName}" хотя бы один раз. Сделай его романтичным и игривым. Основывайся на этом сообщении: "${contextMessage}"\n\nФормат ответа: Только текст сообщения, без кавычек и пояснений.`;
 
-      const textResponse = await chatAPI.sendMessage([
-        { role: 'user', content: prompt }
-      ]);
+      const textResponse = await chatAPI.sendMessage([{ role: 'user', content: prompt }]);
       const flirtText = textResponse.response.trim();
 
-      // Find the original URL of the image for external API
       const imageMessage = messages.find(msg => msg.mediaUrl === imageUrl && msg.type === 'image');
       const originalImageUrl = imageMessage?.originalMediaUrl || imageUrl;
-      console.log('Creating video from image:', { imageUrl, originalImageUrl, imageMessage });
 
-      // Create video with the image and flirt text
       const { videoUrl } = await chatAPI.generateVideoFromImage(originalImageUrl, flirtText);
 
       if (videoUrl) {
@@ -563,28 +418,22 @@ const ChatScreen = () => {
           id: Date.now().toString(),
           type: "video",
           sender: "her",
-          content: `Here's a special video just for you! 💋`,
+          content: "Это особенное видео для тебя! 💋",
           mediaUrl: videoUrl,
-          thumbnailUrl: imageUrl, // Use the source image as thumbnail
+          thumbnailUrl: imageUrl,
           timestamp: new Date(),
         };
-
         const updatedMessages = [...messages, videoMessage];
         setMessages(updatedMessages);
-
-        // Save video message to database
         if (currentGirl?.id) {
           await saveMessageToDatabase(currentGirl.id, videoMessage, undefined, videoMessage.thumbnailUrl);
         }
       } else {
-        throw new Error('Failed to generate video');
+        throw new Error('Не удалось создать видео');
       }
     } catch (error: any) {
       console.error('Error creating video:', error);
-
-      // Just show the backend error message directly
-      const errorContent = error.response?.data?.message || error.message || "Sorry, I couldn't create the video right now... 😔";
-
+      const errorContent = error.response?.data?.message || error.message || "Извини, не получилось создать видео прямо сейчас... 😔";
       const errorMessage: Message = {
         id: Date.now().toString(),
         type: "text",
@@ -594,14 +443,12 @@ const ChatScreen = () => {
       };
       const updatedMessages = [...messages, errorMessage];
       setMessages(updatedMessages);
-
-      // Save error message to database
       if (currentGirl?.id) {
         await saveMessageToDatabase(currentGirl.id, errorMessage);
       }
     } finally {
       setIsTyping(false);
-      setStatus("Online");
+      setStatus("Онлайн");
     }
   };
 
@@ -613,20 +460,18 @@ const ChatScreen = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Background ambient glow */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-20 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute bottom-40 right-0 w-60 h-60 rounded-full bg-lavender-mist/5 blur-3xl" />
       </div>
 
       <ChatHeader
-        name={currentGirl?.name || "Alina"}
+        name={currentGirl?.name || "Алина"}
         status={status}
         avatarUrl={currentGirl?.avatarUrl}
         onAvatarClick={() => setShowProfile(true)}
       />
 
-      {/* Messages area */}
       <main className="pt-20 pb-24 px-4 max-w-lg mx-auto">
         <div className="space-y-3 py-4">
           {messages.map((message) => (
@@ -637,9 +482,7 @@ const ChatScreen = () => {
               onCreateVideo={handleCreateVideo}
             />
           ))}
-
           {isTyping && <TypingIndicator />}
-
           <div ref={messagesEndRef} />
         </div>
       </main>
@@ -649,8 +492,8 @@ const ChatScreen = () => {
       <MiniProfile
         isOpen={showProfile}
         onClose={() => setShowProfile(false)}
-        name={currentGirl?.name || "Alina"}
-        personality={currentGirl ? currentGirl.personality : "Shy, smart, affectionate"}
+        name={currentGirl?.name || "Алина"}
+        personality={currentGirl ? currentGirl.personality : "Застенчивая, умная, ласковая"}
         appearance={currentGirl?.appearance}
         avatarUrl={currentGirl?.avatarUrl}
       />
