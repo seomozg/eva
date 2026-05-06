@@ -1,4 +1,5 @@
 import { translations, Language } from './translations';
+export type { Language };
 
 export function getLanguage(): Language {
   return (localStorage.getItem('lang') as Language) || 'ru';
