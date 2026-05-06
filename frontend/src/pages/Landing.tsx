@@ -69,6 +69,15 @@ const Landing = () => {
             Everything happens through conversation
           </p>
         </div>
+
+        {/* Footer */}
+        <footer className="relative z-10 mt-auto pb-6 text-center px-4">
+          <p className="text-xs text-muted-foreground/50 leading-relaxed">
+            Самозанятый Минаев Владимир Александрович, ИНН 774311723229.{' '}
+            <a href="/policy.html" className="underline hover:text-primary/70 transition-colors">Пользовательское соглашение</a>.{' '}
+            Стоимость: 1 кредит равен 1 рублю.
+          </p>
+        </footer>
       </div>
     </>
   );
