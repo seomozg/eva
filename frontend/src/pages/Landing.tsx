@@ -2,6 +2,7 @@ import { Helmet } from "react-helmet-async";
 import { useNavigate, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { Heart } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -17,8 +18,8 @@ const Landing = () => {
   return (
     <>
       <Helmet>
-        <title>Create Your Virtual Companion</title>
-        <meta name="description" content="Create your perfect AI companion. Design her personality, appearance, and more through natural conversation." />
+        <title>{t('landing_title')}</title>
+        <meta name="description" content={t('landing_subtitle')} />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#0f0e14" />
       </Helmet>
@@ -40,11 +41,11 @@ const Landing = () => {
 
           {/* Heading */}
           <h1 className="font-display text-4xl font-medium text-foreground mb-4 leading-tight">
-            Find your <span className="text-gradient">perfect</span> companion
+            {t('landing_title')}
           </h1>
 
           <p className="text-muted-foreground font-body text-base mb-12 leading-relaxed">
-            Create someone who truly understands you. Just talk, and she'll become exactly who you need.
+            {t('landing_subtitle')}
           </p>
 
           {/* Auth buttons */}
@@ -53,29 +54,29 @@ const Landing = () => {
               to="/register"
               className="block w-full py-4 px-8 rounded-2xl bg-gradient-to-r from-primary to-blush text-primary-foreground font-body font-medium text-lg shadow-lg glow-rose hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
             >
-              Get started
+              {t('landing_start')}
             </Link>
 
             <Link
               to="/login"
               className="block w-full py-4 px-8 rounded-2xl border border-primary/20 bg-background/50 backdrop-blur-sm text-foreground font-body font-medium text-lg hover:bg-primary/5 transition-all duration-300"
             >
-              Sign in
+              {t('landing_signin')}
             </Link>
           </div>
 
           {/* Subtle hint */}
           <p className="mt-6 text-xs text-muted-foreground/60">
-            Everything happens through conversation
+            {t('landing_hint')}
           </p>
         </div>
 
         {/* Footer */}
         <footer className="relative z-10 mt-auto pb-6 text-center px-4">
           <p className="text-xs text-muted-foreground/50 leading-relaxed">
-            Самозанятый Минаев Владимир Александрович, ИНН 774311723229.{' '}
-            <a href="/policy.html" className="underline hover:text-primary/70 transition-colors">Пользовательское соглашение</a>.{' '}
-            Стоимость: 1 кредит равен 1 рублю.
+            {t('landing_footer')}{' '}
+            <a href="/policy.html" className="underline hover:text-primary/70 transition-colors">{t('landing_agreement')}</a>.{' '}
+            {t('landing_price')}
           </p>
         </footer>
       </div>

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Heart } from "lucide-react";
+import { t } from "@/lib/i18n";
 import { authAPI } from "@/lib/api";
 
 const Register = () => {
@@ -45,8 +46,7 @@ const Register = () => {
   return (
     <>
       <Helmet>
-        <title>Register | Virtual Companion</title>
-        <meta name="description" content="Create your virtual companion account" />
+        <title>{t('register_title')} | Virtual Companion</title>
       </Helmet>
 
       <div className="min-h-screen bg-background flex items-center justify-center px-6">
@@ -61,8 +61,8 @@ const Register = () => {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-lavender-mist/10 border border-primary/20 mb-4">
               <Heart className="w-6 h-6 text-primary" />
             </div>
-            <CardTitle className="text-2xl font-display">Create account</CardTitle>
-            <CardDescription>Start your journey with a virtual companion</CardDescription>
+            <CardTitle className="text-2xl font-display">{t('register_title')}</CardTitle>
+            <CardDescription>{t('landing_hint')}</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -74,7 +74,7 @@ const Register = () => {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="firstName">First name</Label>
+                <Label htmlFor="firstName">{t('register_name')}</Label>
                 <Input
                   id="firstName"
                   name="firstName"
@@ -87,7 +87,7 @@ const Register = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('register_email')}</Label>
                 <Input
                   id="email"
                   name="email"
@@ -100,7 +100,7 @@ const Register = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('register_password')}</Label>
                 <Input
                   id="password"
                   name="password"
@@ -118,15 +118,15 @@ const Register = () => {
                 className="w-full"
                 disabled={isLoading}
               >
-                {isLoading ? "Creating account..." : "Create account"}
+                {isLoading ? t('dashboard_saving') : t('register_button')}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Already have an account?{" "}
+                {t('register_login_link')}{" "}
                 <Link to="/login" className="text-primary hover:underline">
-                  Sign in
+                  {t('login_button')}
                 </Link>
               </p>
             </div>

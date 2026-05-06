@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Heart } from "lucide-react";
+import { t } from "@/lib/i18n";
 import { authAPI } from "@/lib/api";
 
 const Login = () => {
@@ -44,8 +45,7 @@ const Login = () => {
   return (
     <>
       <Helmet>
-        <title>Login | Virtual Companion</title>
-        <meta name="description" content="Login to your virtual companion account" />
+        <title>{t('login_title')} | Virtual Companion</title>
       </Helmet>
 
       <div className="min-h-screen bg-background flex items-center justify-center px-6">
@@ -60,8 +60,8 @@ const Login = () => {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-lavender-mist/10 border border-primary/20 mb-4">
               <Heart className="w-6 h-6 text-primary" />
             </div>
-            <CardTitle className="text-2xl font-display">Welcome back</CardTitle>
-            <CardDescription>Sign in to continue your conversations</CardDescription>
+            <CardTitle className="text-2xl font-display">{t('login_title')}</CardTitle>
+            <CardDescription>{t('login_hint')}</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -73,7 +73,7 @@ const Login = () => {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('login_email')}</Label>
                 <Input
                   id="email"
                   name="email"
@@ -86,7 +86,7 @@ const Login = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('login_password')}</Label>
                 <Input
                   id="password"
                   name="password"
@@ -103,7 +103,7 @@ const Login = () => {
                 className="w-full"
                 disabled={isLoading}
               >
-                {isLoading ? "Signing in..." : "Sign in"}
+                {isLoading ? t('dashboard_saving') : t('login_button')}
               </Button>
             </form>
 
@@ -136,9 +136,9 @@ const Login = () => {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Don't have an account?{" "}
+                {t('login_register_link')}{" "}
                 <Link to="/register" className="text-primary hover:underline">
-                  Sign up
+                  {t('register_button')}
                 </Link>
               </p>
             </div>

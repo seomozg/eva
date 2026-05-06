@@ -24,15 +24,15 @@ export const APP_CONFIG = {
 
   // Prompts
   PROMPTS: {
-    INTENT_DETECTION: `Analyze this user message and determine the intent. Respond with ONLY ONE word: text, image, or video.
+    INTENT_DETECTION: `Проанализируй сообщение пользователя и определи намерение. Ответь ТОЛЬКО ОДНИМ словом: text, image или video.
 
-Message: "{message}"
+Сообщение: "{message}"
 
-Intent:`,
+Намерение:`,
 
-    VIDEO_SPEECH: `Generate a short, flirtatious message (max 15 words, about 4 seconds speaking time) that a girl would say to her boyfriend named {userName}. The message MUST include the boyfriend's name "{userName}" at least once. Make it romantic and playful. Base it on this user message: "{contextMessage}"
+    VIDEO_SPEECH: `Сгенерируй короткое кокетливое сообщение (не более 15 слов, примерно 4 секунды речи), которое девушка сказала бы своему парню по имени {userName}. Сообщение ОБЯЗАТЕЛЬНО должно содержать имя парня "{userName}" хотя бы один раз. Сделай его романтичным и игривым. Основывайся на этом сообщении: "{contextMessage}"
 
-Response format: Just the message text, no quotes or explanations.`,
+Формат ответа: Только текст сообщения, без кавычек и пояснений.`,
   },
 
   // Female names for random generation
