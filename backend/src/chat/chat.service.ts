@@ -539,7 +539,7 @@ export class ChatService {
     const firstMessage = params.FIRST_MESSAGES[Math.floor(Math.random() * params.FIRST_MESSAGES.length)];
 
     // Build appearance description
-    const appearance = `A beautiful ${ethnicity} girl with ${hairLength} ${hairColor} hair and ${skinTone} skin. She has a ${bodyType} build with ${breastSize} breasts.`;
+    const appearance = `Красивая девушка ${ethnicity} внешности с ${hairLength} ${hairColor} волосами и ${skinTone} кожей. У неё ${bodyType} телосложение с ${breastSize} грудью.`;
 
     return {
       appearance,

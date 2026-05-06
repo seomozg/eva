@@ -36,34 +36,34 @@ export const APP_CONFIG = {
   },
 
   // Female names for random generation
-  FEMALE_NAMES: [
-    'Emma', 'Olivia', 'Ava', 'Isabella', 'Sophia', 'Charlotte', 'Mia', 'Amelia', 'Harper', 'Evelyn',
-    'Abigail', 'Emily', 'Elizabeth', 'Sofia', 'Grace', 'Avery', 'Scarlett', 'Victoria', 'Aria', 'Lily',
-    'Chloe', 'Zoey', 'Penelope', 'Hannah', 'Nora', 'Lillian', 'Addison', 'Aubrey', 'Ellie', 'Stella',
-    'Natalie', 'Leah', 'Zoe', 'Brooklyn', 'Savannah', 'Audrey', 'Claire', 'Bella', 'Skylar', 'Lucy',
-    'Anna', 'Samantha', 'Caroline', 'Genesis', 'Aaliyah', 'Kennedy', 'Allison', 'Gabriella', 'Madelyn', 'Maya'
+    FEMALE_NAMES: [
+    'Анна', 'Мария', 'Елена', 'Ольга', 'Татьяна', 'Дарья', 'Екатерина', 'Наталья', 'Ирина', 'Светлана',
+    'Анастасия', 'Юлия', 'Алёна', 'Виктория', 'Ксения', 'София', 'Полина', 'Александра', 'Вероника', 'Арина',
+    'Алиса', 'Милана', 'Ева', 'Валерия', 'Диана', 'Ангелина', 'Маргарита', 'Кристина', 'Элина', 'Карина',
+    'Лилия', 'Яна', 'Варвара', 'Марина', 'Людмила', 'Надежда', 'Ульяна', 'Дарина', 'Амина', 'Вера',
+    'Софья', 'Мия', 'Тимофея', 'Злата', 'Любовь', 'Ника', 'Эмилия', 'Аврора', 'Рената', 'Агата'
   ],
 
   // Random girl generation parameters
   GIRL_GENERATION_PARAMS: {
-    HAIR_LENGTH: ['long', 'short', 'bob', 'shoulder-length', 'pixie', 'braided', 'curly long'],
-    HAIR_COLOR: ['blonde', 'brunette', 'redhead', 'black', 'platinum blonde', 'ash brown', 'chestnut', 'jet black', 'strawberry blonde'],
-    ETHNICITY: ['European', 'Asian', 'African', 'mixed-race (mulatto)', 'Latina', 'Middle Eastern', 'Scandinavian', 'Mediterranean', 'Slavic', 'Nordic', 'Pacific Islander', 'Native American'],
-    BODY_TYPE: ['slim', 'athletic', 'petite', 'curvy', 'hourglass', 'toned', 'fit'],
-    BREAST_SIZE: ['small', 'medium', 'large', 'petite', 'full'],
-    SKIN_TONE: ['fair', 'medium', 'olive', 'tan', 'dark'],
-    PERSONALITY_TRAITS: ['shy', 'confident', 'witty', 'sarcastic', 'sweet', 'adventurous', 'intellectual', 'artistic', 'athletic', 'mysterious', 'bubbly', 'reserved', 'passionate', 'gentle', 'fierce', 'playful', 'ambitious', 'compassionate', 'bold', 'delicate', 'energetic', 'calm', 'charismatic', 'thoughtful', 'spontaneous'],
+    HAIR_LENGTH: ['длинные', 'короткие', 'каре', 'до плеч', 'пикси', 'заплетённые', 'длинные кудрявые'],
+    HAIR_COLOR: ['блондинка', 'брюнетка', 'рыжая', 'чёрные', 'платиновая блондинка', 'пепельно-русые', 'каштановые', 'иссиня-чёрные', 'светло-рыжие'],
+    ETHNICITY: ['европейской', 'азиатской', 'африканской', 'смешанной', 'латиноамериканской', 'ближневосточной', 'скандинавской', 'средиземноморской', 'славянской', 'нордической', 'тихоокеанской', 'индейской'],
+    BODY_TYPE: ['стройное', 'спортивное', 'миниатюрное', 'соблазнительное', 'песочные часы', 'подтянутое', 'фитнес'],
+    BREAST_SIZE: ['маленькой', 'средней', 'большой', 'аккуратной', 'полной'],
+    SKIN_TONE: ['светлой', 'средней', 'оливковой', 'загорелой', 'тёмной'],
+    PERSONALITY_TRAITS: ['застенчивая', 'уверенная', 'остроумная', 'саркастичная', 'милая', 'любящая приключения', 'интеллектуальная', 'творческая', 'спортивная', 'загадочная', 'энергичная', 'сдержанная', 'страстная', 'нежная', 'дерзкая', 'игривая', 'амбициозная', 'сострадательная', 'смелая', 'утончённая', 'жизнерадостная', 'спокойная', 'харизматичная', 'задумчивая', 'спонтанная'],
     FIRST_MESSAGES: [
-      "Hi there! I've been waiting to meet someone special like you 💕",
-      "Hello! You look like someone I could really connect with 😊",
-      "Hey! I hope you're having a great day. Want to chat? 🌟",
-      "Hi! I'm so excited to get to know you better! 💫",
-      "Hello there! You seem really interesting. Tell me about yourself! ✨",
-      "Hey! I've been thinking about finding someone to talk to. Glad it's you! 💕",
-      "Hi! You have such a warm smile. What's your story? 😊",
-      "Hello! I'm really looking forward to our conversation! 🌸",
-      "Hey there! You caught my eye. Let's get to know each other! 💫",
-      "Hi! I'm so glad we matched. You seem amazing! ✨"
+      "Привет! Я так ждала встречи с кем-то особенным, как ты 💕",
+      "Здравствуй! Ты выглядишь как кто-то, с кем я могла бы по-настоящему сблизиться 😊",
+      "Привет! Надеюсь, у тебя отличный день. Хочешь пообщаться? 🌟",
+      "Привет! Я так рада узнать тебя поближе! 💫",
+      "Здравствуй! Ты кажешься очень интересным. Расскажи о себе! ✨",
+      "Привет! Я давно думала найти кого-то для общения. Рада, что это ты! 💕",
+      "Привет! У тебя такая тёплая улыбка. Какая у тебя история? 😊",
+      "Здравствуй! Я очень жду нашего разговора! 🌸",
+      "Привет! Ты привлёк моё внимание. Давай узнаем друг друга! 💫",
+      "Привет! Я так рада, что мы встретились. Ты кажешься потрясающим! ✨"
     ]
   },
 

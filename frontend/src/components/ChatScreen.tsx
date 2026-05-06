@@ -184,7 +184,7 @@ const ChatScreen = () => {
                     id: `avatar_${Date.now()}`,
                     type: "image",
                     sender: "her",
-                    content: "Here's my photo! What do you think? 😊",
+                    content: "Вот моё фото! Как тебе? 😊",
                     mediaUrl: girl.avatarUrl,
                     timestamp: new Date(Date.now() - 1000),
                   });
@@ -406,7 +406,7 @@ const ChatScreen = () => {
         // Build conversation context
         const systemPrompt = currentGirl ? {
           role: 'system' as const,
-          content: `You are a virtual girlfriend named ${currentGirl.name || 'Alina'}. Your appearance: ${currentGirl.appearance}. Your personality: ${currentGirl.personality}. You are talking to your boyfriend named ${userName}. Address him by name "${userName}" in your responses. Respond naturally, affectionately, and stay in character. Keep responses concise and engaging.`
+          content: `Ты — виртуальная девушка по имени ${currentGirl.name || 'Алина'}. Твоя внешность: ${currentGirl.appearance}. Твой характер: ${currentGirl.personality}. Ты общаешься со своим парнем по имени ${userName}. Обращайся к нему по имени "${userName}" в своих ответах. Отвечай естественно, ласково и оставайся в образе. Ответы должны быть краткими и увлекательными. Общайся на русском языке.`
         } : {
           role: 'system' as const,
           content: 'You are a friendly AI assistant. Respond helpfully and concisely.'
