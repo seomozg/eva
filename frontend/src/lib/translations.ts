@@ -55,12 +55,9 @@ export const translations = {
     dashboard_first_name: "First Name",
     dashboard_save: "Save",
     dashboard_saving: "Saving...",
-    dashboard_subscription: "Subscription",
-    dashboard_free_plan: "free plan",
     dashboard_balance: "Balance",
     dashboard_your_credits: "Your current credits",
     dashboard_top_up: "Top up balance",
-    dashboard_your_plan: "Your current subscription plan",
     dashboard_edit_girl: "Edit",
     dashboard_edit_girl_desc: "Modify the appearance and personality of your virtual companion.",
     dashboard_appearance: "Appearance",
@@ -75,6 +72,8 @@ export const translations = {
     dashboard_language_en: "English",
     dashboard_credits_label: "credits",
     dashboard_credits_price: "1 credit = 1 ruble",
+    dashboard_image_price: "🖼️ Photo — 5 credits",
+    dashboard_video_price: "🎬 Video — 30 credits",
 
     // Chat
     chat_input_placeholder: "Write a message...",
@@ -157,12 +156,9 @@ export const translations = {
     dashboard_first_name: "Имя",
     dashboard_save: "Сохранить",
     dashboard_saving: "Сохранение...",
-    dashboard_subscription: "Подписка",
-    dashboard_free_plan: "бесплатный план",
     dashboard_balance: "Баланс",
     dashboard_your_credits: "Ваши текущие кредиты",
     dashboard_top_up: "Пополнить баланс",
-    dashboard_your_plan: "Ваш текущий тариф",
     dashboard_edit_girl: "Редактировать",
     dashboard_edit_girl_desc: "Измените внешность и характер вашей виртуальной спутницы.",
     dashboard_appearance: "Внешность",
@@ -177,6 +173,8 @@ export const translations = {
     dashboard_language_en: "English",
     dashboard_credits_label: "кредитов",
     dashboard_credits_price: "1 кредит = 1 рубль",
+    dashboard_image_price: "🖼️ Фото — 5 кредитов",
+    dashboard_video_price: "🎬 Видео — 30 кредитов",
 
     // Chat
     chat_input_placeholder: "Напишите сообщение...",

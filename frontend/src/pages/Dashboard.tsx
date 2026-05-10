@@ -20,7 +20,6 @@ interface User {
   firstName: string;
   lastName: string;
   balance: number;
-  subscriptionType: string;
 }
 
 interface Girl {
@@ -370,10 +369,6 @@ const Dashboard = () => {
                       </Button>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">{t('dashboard_subscription')}</label>
-                    <p className="text-sm text-muted-foreground capitalize">{user?.subscriptionType} {t('dashboard_free_plan')}</p>
-                  </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">{t('dashboard_language')}</label>
                     <Select value={lang} onValueChange={(v: Language) => handleLanguageChange(v)}>
@@ -401,17 +396,12 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-primary mb-4">{balance?.balance || 0} {t('dashboard_credits_label')}</div>
+                <div className="space-y-1 mb-4 text-sm text-muted-foreground">
+                  <p>{t('dashboard_image_price')}</p>
+                  <p>{t('dashboard_video_price')}</p>
+                </div>
                 <Button variant="outline" size="sm">{t('dashboard_top_up')}</Button>
                 <p className="text-xs text-muted-foreground mt-2">{t('dashboard_credits_price')}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="mt-8">
-            <Card>
-              <CardContent className="text-center py-6">
-                <Badge variant="secondary" className="mb-2">{user?.subscriptionType} {t('dashboard_free_plan')}</Badge>
-                <p className="text-sm text-muted-foreground">{t('dashboard_your_plan')}</p>
               </CardContent>
             </Card>
           </div>

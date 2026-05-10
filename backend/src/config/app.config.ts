@@ -2,8 +2,8 @@
 export const APP_CONFIG = {
   // Pricing
   PRICING: {
-    IMAGE_GENERATION: 1,
-    VIDEO_GENERATION: 10,
+    IMAGE_GENERATION: 5,
+    VIDEO_GENERATION: 30,
     INITIAL_BALANCE: 100, // Starting balance for new users
   },
 
