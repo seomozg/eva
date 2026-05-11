@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 import { ChatModule } from './chat/chat.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { PaymentsModule } from './payments/payments.module';
 import { User } from './entities/user.entity';
 import { Girl } from './entities/girl.entity';
 import { Conversation } from './entities/conversation.entity';
@@ -34,6 +35,7 @@ import { Transaction } from './entities/transaction.entity';
     AuthModule,
     UsersModule,
     ChatModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

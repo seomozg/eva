@@ -58,7 +58,7 @@ curl https://your-virtual-cutie.ru/health   # → {"status":"ok"}
 - `:80` → редирект на HTTPS
 - `:443` → SSL (Let's Encrypt), проксирует:
   - `/` → `127.0.0.1:8080` (фронтенд)
-  - `/uploads/`, `/auth/`, `/users/`, `/chat/*`, `/health` → `127.0.0.1:3002` (бэкенд)
+  - `/uploads/`, `/auth/`, `/users/`, `/chat/*`, `/health`, `/payments/`, `/api/webhooks/` → `127.0.0.1:3002` (бэкенд)
 
 ---
 
@@ -77,6 +77,11 @@ FAL_API_KEY=...
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 GOOGLE_CALLBACK_URL=https://your-virtual-cutie.ru/auth/google/callback
+
+# YooKassa
+YOOKASSA_SHOP_ID=your_shop_id
+YOOKASSA_SECRET_KEY=your_secret_key
+YOOKASSA_RETURN_URL=https://your-virtual-cutie.ru/dashboard
 
 NODE_ENV=production
 PORT=3000
@@ -120,6 +125,10 @@ PORT=3000
 - `PUT /users/girls/:id`
 - `DELETE /users/girls/:id`
 
+### Payments (YooKassa)
+- `POST /payments/create` — создать платёж (JWT), возвращает `confirmationUrl`
+- `POST /api/webhooks/yookassa` — вебхук от YooKassa (публичный)
+
 ---
 
 ## Tech Stack
@@ -128,9 +137,21 @@ PORT=3000
 - **Frontend**: React, Vite, TypeScript, Tailwind CSS, shadcn/ui
 - **AI**: DeepSeek (чат), Fal.ai (изображения / видео)
 - **Auth**: JWT + Google OAuth
+- **Платежи**: YooKassa (пополнение баланса)
 - **Инфраструктура**: Docker, Nginx, Let's Encrypt
 
 ---
+
+## Платежи (YooKassa)
+
+Пользователь может пополнить баланс через YooKassa:
+1. На дашборде → `/deposit` → выбор суммы → «Пополнить»
+2. Бэкенд создаёт транзакцию (status=`PENDING`) и вызывает `POST https://api.yookassa.ru/v3/payments`
+3. Фронтенд получает `confirmationUrl` и редиректит пользователя на платёжную страницу YooKassa
+4. После оплаты YooKassa отправляет вебхук `POST /api/webhooks/yookassa`
+5. Бэкенд **верифицирует** платёж через `GET /v3/payments/{id}` и пополняет баланс
+
+> Для модерации YooKassa нужна стандартная HTML-форма оплаты. Она реализована на странице `/deposit`.
 
 ## Бэкап
 

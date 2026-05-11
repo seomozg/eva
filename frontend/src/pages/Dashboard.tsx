@@ -400,7 +400,7 @@ const Dashboard = () => {
                   <p>{t('dashboard_image_price')}</p>
                   <p>{t('dashboard_video_price')}</p>
                 </div>
-                <Button variant="outline" size="sm">{t('dashboard_top_up')}</Button>
+                <Button variant="outline" size="sm" onClick={() => navigate('/deposit')}>{t('dashboard_top_up')}</Button>
                 <p className="text-xs text-muted-foreground mt-2">{t('dashboard_credits_price')}</p>
               </CardContent>
             </Card>
