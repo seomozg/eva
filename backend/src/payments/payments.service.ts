@@ -84,11 +84,11 @@ export class PaymentsService {
     }
 
     const result = cryptoCloudResponse?.result;
-    const paymentId: string = result?.id;
+    const paymentId: string = result?.uuid;
     const confirmationUrl: string = result?.link;
 
     if (!paymentId || !confirmationUrl) {
-      this.logger.error('CryptoCloud response missing invoice_id or link', cryptoCloudResponse);
+      this.logger.error('CryptoCloud response missing uuid or link', cryptoCloudResponse);
       throw new BadRequestException('Invalid payment response from CryptoCloud');
     }
 
