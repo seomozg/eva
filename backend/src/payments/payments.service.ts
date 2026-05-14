@@ -84,7 +84,7 @@ export class PaymentsService {
     }
 
     const result = cryptoCloudResponse?.result;
-    const paymentId: string = result?.invoice_id;
+    const paymentId: string = result?.id;
     const confirmationUrl: string = result?.link;
 
     if (!paymentId || !confirmationUrl) {
