@@ -3,13 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { createHmac } from 'crypto';
 import { Transaction, TransactionType, TransactionStatus } from '../entities/transaction.entity';
 import { User } from '../entities/user.entity';
 
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
-  private readonly apiUrl = 'https://api.yookassa.ru/v3/payments';
+  private readonly apiUrl = 'https://api.cryptocloud.plus/v2/invoice/create';
 
   constructor(
     @InjectRepository(Transaction)
@@ -19,69 +20,74 @@ export class PaymentsService {
     private readonly httpService: HttpService,
   ) {}
 
-  private getAuthHeader(): string {
-    const shopId = process.env.YOOKASSA_SHOP_ID;
-    const secretKey = process.env.YOOKASSA_SECRET_KEY;
-    if (!shopId || !secretKey) {
-      throw new BadRequestException('YooKassa credentials are not configured');
+  private get apiKey(): string {
+    const key = process.env.CRYPTOCLOUD_API_KEY;
+    if (!key) {
+      throw new BadRequestException('CryptoCloud API key is not configured');
     }
-    const token = Buffer.from(`${shopId}:${secretKey}`).toString('base64');
-    return `Basic ${token}`;
+    return key;
+  }
+
+  private get shopId(): string {
+    const id = process.env.CRYPTOCLOUD_SHOP_ID;
+    if (!id) {
+      throw new BadRequestException('CryptoCloud shop ID is not configured');
+    }
+    return id;
   }
 
   /**
-   * Create a payment in YooKassa and save a pending transaction.
-   * Returns the confirmation_url for redirecting the user.
+   * Verify HMAC-SHA256 signature from CryptoCloud webhook.
+   */
+  verifyWebhookSignature(bodyRaw: string, signatureHeader: string): boolean {
+    const hmac = createHmac('sha256', this.apiKey);
+    hmac.update(bodyRaw);
+    const computed = hmac.digest('hex');
+    return computed === signatureHeader;
+  }
+
+  /**
+   * Create an invoice in CryptoCloud and save a pending transaction.
+   * Returns the payment link for redirecting the user.
    */
   async createPayment(userId: string, amount: number): Promise<{ confirmationUrl: string; paymentId: string }> {
     if (amount <= 0) {
       throw new BadRequestException('Amount must be positive');
     }
 
-    const idempotenceKey = `deposit-${userId}-${Date.now()}`;
-    const returnUrl = process.env.YOOKASSA_RETURN_URL || process.env.BASE_URL || 'https://your-virtual-cutie.ru';
-    const description = `Пополнение баланса на ${amount} ₽`;
+    const orderId = `deposit-${userId}-${Date.now()}`;
 
     const payload = {
-      amount: {
-        value: amount.toFixed(2),
-        currency: 'RUB',
-      },
-      confirmation: {
-        type: 'redirect',
-        return_url: returnUrl,
-      },
-      capture: true,
-      description,
-      metadata: {
-        user_id: userId,
-      },
+      amount: amount.toFixed(2),
+      shop_id: this.shopId,
+      order_id: orderId,
+      currency: 'RUB',
     };
 
-    let yookassaPayment;
+    let cryptoCloudResponse;
     try {
       const response = await firstValueFrom(
         this.httpService.post(this.apiUrl, payload, {
           headers: {
             'Content-Type': 'application/json',
-            Authorization: this.getAuthHeader(),
-            'Idempotence-Key': idempotenceKey,
+            Authorization: `Token ${this.apiKey}`,
           },
         }),
       );
-      yookassaPayment = response.data;
+      cryptoCloudResponse = response.data;
     } catch (error: unknown) {
       const err = error as { response?: { data?: unknown }; message?: string };
-      this.logger.error('Failed to create YooKassa payment', err.response?.data || err.message);
+      this.logger.error('Failed to create CryptoCloud invoice', err.response?.data || err.message);
       throw new BadRequestException('Failed to create payment. Please try again later.');
     }
 
-    const paymentId: string = yookassaPayment.id;
-    const confirmationUrl: string = yookassaPayment.confirmation?.confirmation_url;
+    const result = cryptoCloudResponse?.result;
+    const paymentId: string = result?.invoice_id;
+    const confirmationUrl: string = result?.link;
 
     if (!paymentId || !confirmationUrl) {
-      this.logger.error('YooKassa response missing payment ID or confirmation URL', yookassaPayment);
-      throw new BadRequestException('Invalid payment response from YooKassa');
+      this.logger.error('CryptoCloud response missing invoice_id or link', cryptoCloudResponse);
+      throw new BadRequestException('Invalid payment response from CryptoCloud');
     }
 
     // Save a pending transaction
@@ -90,7 +96,7 @@ export class PaymentsService {
       type: TransactionType.DEPOSIT,
       amount,
       status: TransactionStatus.PENDING,
-      description: `YooKassa payment: ${paymentId}`,
+      description: `CryptoCloud invoice: ${paymentId}`,
       externalId: paymentId,
     });
     await this.transactionRepo.save(transaction);
@@ -99,52 +105,25 @@ export class PaymentsService {
   }
 
   /**
-   * Verify payment status by calling YooKassa API directly.
-   * Returns the actual payment status from YooKassa.
+   * Process a successful payment: update transaction status and top up user balance.
+   * No API verification needed — webhook signature has already been verified.
    */
-  async verifyPayment(paymentId: string): Promise<string> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get(`${this.apiUrl}/${paymentId}`, {
-          headers: {
-            Authorization: this.getAuthHeader(),
-          },
-        }),
-      );
-      return response.data?.status;
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: unknown }; message?: string };
-      this.logger.error('Failed to verify YooKassa payment', err.response?.data || err.message);
-      throw new BadRequestException('Failed to verify payment');
-    }
-  }
-
-  /**
-   * Process a succeeded payment: update transaction status and top up user balance.
-   */
-  async processSuccessfulPayment(paymentId: string): Promise<void> {
+  async processSuccessfulPayment(invoiceId: string): Promise<void> {
     // Check if already processed (idempotency)
     const existing = await this.transactionRepo.findOne({
-      where: { externalId: paymentId, status: TransactionStatus.COMPLETED },
+      where: { externalId: invoiceId, status: TransactionStatus.COMPLETED },
     });
     if (existing) {
-      this.logger.log(`Payment ${paymentId} already processed, skipping`);
+      this.logger.log(`Invoice ${invoiceId} already processed, skipping`);
       return;
     }
 
     // Find pending transaction
     const transaction = await this.transactionRepo.findOne({
-      where: { externalId: paymentId, status: TransactionStatus.PENDING },
+      where: { externalId: invoiceId, status: TransactionStatus.PENDING },
     });
     if (!transaction) {
-      this.logger.warn(`No pending transaction found for payment ${paymentId}`);
-      return;
-    }
-
-    // Verify with YooKassa API
-    const status = await this.verifyPayment(paymentId);
-    if (status !== 'succeeded') {
-      this.logger.warn(`Payment ${paymentId} status is "${status}", not "succeeded" — skipping`);
+      this.logger.warn(`No pending transaction found for invoice ${invoiceId}`);
       return;
     }
 
@@ -155,6 +134,6 @@ export class PaymentsService {
     // Top up user balance
     await this.userRepo.increment({ id: transaction.userId }, 'balance', Number(transaction.amount));
 
-    this.logger.log(`Payment ${paymentId} processed successfully: +${transaction.amount} credits to user ${transaction.userId}`);
+    this.logger.log(`Invoice ${invoiceId} processed successfully: +${transaction.amount} credits to user ${transaction.userId}`);
   }
 }

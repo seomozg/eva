@@ -1,5 +1,5 @@
 import { Controller, Post, Body, UseGuards, Req, Headers, HttpCode, Logger } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -25,37 +25,48 @@ export class PaymentsController {
   }
 
   /**
-   * YooKassa webhook endpoint (public).
-   * POST /api/webhooks/yookassa
+   * CryptoCloud webhook endpoint (public).
+   * POST /api/webhooks/cryptocloud
+   * CryptoCloud sends HMAC-SHA256 signature in X-Signature header.
    */
-  @Post('api/webhooks/yookassa')
+  @Post('api/webhooks/cryptocloud')
   @HttpCode(200)
-  async handleWebhook(@Body() body: { event: string; object?: { id?: string; status?: string } }) {
-    const event = body.event;
-    const paymentId = body.object?.id;
-
-    this.logger.log(`Webhook received: event=${event}, paymentId=${paymentId}`);
-
-    if (!paymentId) {
-      this.logger.warn('Webhook missing payment ID');
+  async handleWebhook(
+    @Req() req: Request,
+    @Headers('x-signature') signature: string,
+    @Body() body: { invoice_id?: string; status?: string },
+  ) {
+    // Verify HMAC signature — CryptoCloud signs the JSON body
+    const rawBody = JSON.stringify(body);
+    if (!signature || !this.paymentsService.verifyWebhookSignature(rawBody, signature)) {
+      this.logger.warn('Webhook signature verification failed');
       return { received: true };
     }
 
-    if (event === 'payment.succeeded') {
-      try {
-        await this.paymentsService.processSuccessfulPayment(paymentId);
-      } catch (error: unknown) {
-        const err = error as { message?: string };
-        this.logger.error(`Failed to process webhook for ${paymentId}: ${err.message}`);
-      }
-    } else if (event === 'payment.canceled') {
-      this.logger.log(`Payment ${paymentId} was canceled`);
-      // Optionally update transaction to FAILED, but keep it simple for now
-    } else {
-      this.logger.log(`Unhandled event: ${event}`);
+    const invoiceId = body.invoice_id;
+    const status = body.status;
+
+    this.logger.log(`Webhook received: invoiceId=${invoiceId}, status=${status}`);
+
+    if (!invoiceId) {
+      this.logger.warn('Webhook missing invoice_id');
+      return { received: true };
     }
 
-    // Always return 200 so YooKassa doesn't retry
+    if (status === 'success') {
+      try {
+        await this.paymentsService.processSuccessfulPayment(invoiceId);
+      } catch (error: unknown) {
+        const err = error as { message?: string };
+        this.logger.error(`Failed to process webhook for ${invoiceId}: ${err.message}`);
+      }
+    } else if (status === 'fail' || status === 'expired') {
+      this.logger.log(`Invoice ${invoiceId} ended with status: ${status}`);
+    } else {
+      this.logger.log(`Unhandled status: ${status} for invoice ${invoiceId}`);
+    }
+
+    // Always return 200 so CryptoCloud doesn't retry
     return { received: true };
   }
 }

@@ -78,10 +78,9 @@ GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 GOOGLE_CALLBACK_URL=https://your-virtual-cutie.ru/auth/google/callback
 
-# YooKassa
-YOOKASSA_SHOP_ID=your_shop_id
-YOOKASSA_SECRET_KEY=your_secret_key
-YOOKASSA_RETURN_URL=https://your-virtual-cutie.ru/dashboard
+# CryptoCloud
+CRYPTOCLOUD_API_KEY=your_api_key
+CRYPTOCLOUD_SHOP_ID=your_shop_id
 
 NODE_ENV=production
 PORT=3000
@@ -125,9 +124,9 @@ PORT=3000
 - `PUT /users/girls/:id`
 - `DELETE /users/girls/:id`
 
-### Payments (YooKassa)
+### Payments (CryptoCloud)
 - `POST /payments/create` — создать платёж (JWT), возвращает `confirmationUrl`
-- `POST /api/webhooks/yookassa` — вебхук от YooKassa (публичный)
+- `POST /api/webhooks/cryptocloud` — вебхук от CryptoCloud (публичный, HMAC-SHA256)
 
 ---
 
@@ -137,21 +136,21 @@ PORT=3000
 - **Frontend**: React, Vite, TypeScript, Tailwind CSS, shadcn/ui
 - **AI**: DeepSeek (чат), Fal.ai (изображения / видео)
 - **Auth**: JWT + Google OAuth
-- **Платежи**: YooKassa (пополнение баланса)
+- **Платежи**: CryptoCloud (пополнение баланса криптовалютой)
 - **Инфраструктура**: Docker, Nginx, Let's Encrypt
 
 ---
 
-## Платежи (YooKassa)
+## Платежи (CryptoCloud)
 
-Пользователь может пополнить баланс через YooKassa:
+Пользователь может пополнить баланс криптовалютой через CryptoCloud:
 1. На дашборде → `/deposit` → выбор суммы → «Пополнить»
-2. Бэкенд создаёт транзакцию (status=`PENDING`) и вызывает `POST https://api.yookassa.ru/v3/payments`
-3. Фронтенд получает `confirmationUrl` и редиректит пользователя на платёжную страницу YooKassa
-4. После оплаты YooKassa отправляет вебхук `POST /api/webhooks/yookassa`
-5. Бэкенд **верифицирует** платёж через `GET /v3/payments/{id}` и пополняет баланс
+2. Бэкенд создаёт транзакцию (status=`PENDING`) и вызывает `POST https://api.cryptocloud.plus/v2/invoice/create`
+3. Фронтенд получает `link` и редиректит пользователя на платёжную страницу CryptoCloud
+4. После оплаты CryptoCloud отправляет вебхук `POST /api/webhooks/cryptocloud` с HMAC-SHA256 подписью
+5. Бэкенд проверяет подпись (`X-Signature`) и пополняет баланс
 
-> Для модерации YooKassa нужна стандартная HTML-форма оплаты. Она реализована на странице `/deposit`.
+> Страница `/deposit` — стандартная HTML-форма с выбором суммы.
 
 ## Бэкап
 

@@ -134,7 +134,7 @@ const Deposit = () => {
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
-                Вы будете перенаправлены на защищённую страницу оплаты YooKassa
+                Вы будете перенаправлены на страницу оплаты криптовалютой (CryptoCloud)
               </p>
             </CardContent>
           </Card>
