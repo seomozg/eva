@@ -62,6 +62,8 @@ export class PaymentsService {
       shop_id: this.shopId,
       order_id: orderId,
       currency: 'RUB',
+      success_url: 'https://your-virtual-cutie.ru/successful-payment',
+      fail_url: 'https://your-virtual-cutie.ru/failed-payment',
     };
 
     let cryptoCloudResponse;
