@@ -4,7 +4,7 @@ import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 interface AuthenticatedRequest extends Request {
-  user: { userId: string; email: string };
+  user: { id: string; email: string };
 }
 
 @Controller()
@@ -20,7 +20,7 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   @Post('payments/create')
   async createPayment(@Req() req: AuthenticatedRequest, @Body('amount') amount: number) {
-    const { confirmationUrl } = await this.paymentsService.createPayment(req.user.userId, amount);
+    const { confirmationUrl } = await this.paymentsService.createPayment(req.user.id, amount);
     return { confirmationUrl };
   }
 
