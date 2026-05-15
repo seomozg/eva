@@ -23,7 +23,7 @@ import { Transaction } from './entities/transaction.entity';
       port: parseInt(process.env.DB_PORT || '5432'),
       username: process.env.DB_USERNAME || 'postgres',
       password: process.env.DB_PASSWORD || 'password',
-      database: process.env.DB_NAME || 'eva_db',
+      database: process.env.DB_DATABASE || process.env.DB_NAME || 'eva_db',
       entities: [User, Girl, Conversation, Transaction],
       synchronize: true, // Set to false in production
       logging: true,
