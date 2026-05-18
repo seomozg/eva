@@ -315,11 +315,19 @@ export class ChatService {
           this.logger.log(`Poll attempt ${attempt + 1}: status=${currentStatus}`);
 
           if (currentStatus === 'COMPLETED') {
-            const result = statusResponse.data;
-            this.logger.log(`Flux/schnell response: ${JSON.stringify(result)}`);
+            // Fetch actual result from response_url (status_url doesn't contain images)
+            const resultResponse = await firstValueFrom(
+              this.httpService.get(queueResponse.data.response_url, {
+                headers: {
+                  'Authorization': `Key ${apiKey}`,
+                },
+              }),
+            );
+            const result = resultResponse.data;
+            this.logger.log(`Flux/schnell result: ${JSON.stringify(result)}`);
             const imageUrl = result?.images?.[0]?.url;
             if (!imageUrl) {
-              this.logger.error(`No image URL in completed response: ${JSON.stringify(result)}`);
+              this.logger.error(`No image URL in result: ${JSON.stringify(result)}`);
               return '';
             }
 
