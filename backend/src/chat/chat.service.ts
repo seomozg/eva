@@ -265,91 +265,81 @@ export class ChatService {
         return '';
       }
     } else {
-      // Use fal.ai flux/schnell for new image generation
-      this.logger.log('Generating new image using fal.ai flux/schnell...');
-      const apiKey = this.configService.get<string>('FAL_API_KEY');
-      if (!apiKey || apiKey === 'your_fal_api_key_here') {
-        this.logger.warn('fal.ai API key not set, skipping image generation');
+      // Use RunPod Serverless for NSFW-capable image generation
+      this.logger.log('Generating image using RunPod...');
+      const runpodKey = this.configService.get<string>('RUNPOD_API_KEY');
+      if (!runpodKey) {
+        this.logger.warn('RunPod API key not set, skipping image generation');
         return '';
       }
 
       try {
         const requestData = {
-          prompt,
-          image_size: 'square_hd',
-          num_images: 1,
-          enable_safety_checker: false,
-          output_format: 'jpeg',
-          sync_mode: false,
+          input: {
+            prompt,
+            negative_prompt: 'blurry, low quality, deformed, ugly, text, watermark, signature',
+            width: 1024,
+            height: 1024,
+            num_inference_steps: 25,
+            guidance_scale: 7.5,
+            num_images: 1,
+          },
         };
-        this.logger.log(`Fal.ai request: ${JSON.stringify({ url: 'https://queue.fal.run/fal-ai/flux/schnell', body: requestData })}`);
+        const runpodUrl = 'https://api.runpod.ai/v2/w3lcotim2xnzhd/run';
+        this.logger.log(`RunPod request: ${JSON.stringify({ url: runpodUrl, body: requestData })}`);
 
-        // Step 1: Submit to queue
-        const queueResponse = await firstValueFrom(
-          this.httpService.post(
-            'https://queue.fal.run/fal-ai/flux/schnell',
-            requestData,
-            {
-              headers: {
-                'Authorization': `Key ${apiKey}`,
-                'Content-Type': 'application/json',
-              },
+        const runResponse = await firstValueFrom(
+          this.httpService.post(runpodUrl, requestData, {
+            headers: {
+              'Authorization': `Bearer ${runpodKey}`,
+              'Content-Type': 'application/json',
             },
-          ),
+          }),
         );
 
-        const { request_id, status, status_url } = queueResponse.data;
-        this.logger.log(`Queue submitted: request_id=${request_id}, status=${status}`);
+        const { id: runId, status } = runResponse.data;
+        this.logger.log(`RunPod job submitted: id=${runId}, status=${status}`);
 
-        // Step 2: Poll for completion (max 30 attempts, 2s interval)
-        for (let attempt = 0; attempt < 30; attempt++) {
-          await new Promise(r => setTimeout(r, 2000));
+        // Poll /status/{id} until COMPLETED (max 60 attempts, 3s interval = 3 min)
+        for (let attempt = 0; attempt < 60; attempt++) {
+          await new Promise(r => setTimeout(r, 3000));
           const statusResponse = await firstValueFrom(
-            this.httpService.get(status_url, {
-              headers: {
-                'Authorization': `Key ${apiKey}`,
-              },
+            this.httpService.get(`https://api.runpod.ai/v2/w3lcotim2xnzhd/status/${runId}`, {
+              headers: { 'Authorization': `Bearer ${runpodKey}` },
             }),
           );
-          const currentStatus = statusResponse.data?.status;
-          this.logger.log(`Poll attempt ${attempt + 1}: status=${currentStatus}`);
+
+          const result = statusResponse.data;
+          const currentStatus = result?.status;
+          this.logger.log(`RunPod poll ${attempt + 1}: status=${currentStatus}`);
 
           if (currentStatus === 'COMPLETED') {
-            // Fetch actual result from response_url (status_url doesn't contain images)
-            const resultResponse = await firstValueFrom(
-              this.httpService.get(queueResponse.data.response_url, {
-                headers: {
-                  'Authorization': `Key ${apiKey}`,
-                },
-              }),
-            );
-            const result = resultResponse.data;
-            this.logger.log(`Flux/schnell result: ${JSON.stringify(result)}`);
-            const imageUrl = result?.images?.[0]?.url;
+            const imageUrl = result?.output?.image_url;
             if (!imageUrl) {
-              this.logger.error(`No image URL in result: ${JSON.stringify(result)}`);
+              this.logger.error(`No image_url in RunPod result: ${JSON.stringify(result)}`);
               return '';
             }
 
-            const { localUrl, fileSize } = await this.downloadAndSaveFile(imageUrl, 'image');
-            if (fileSize < 5000) {
-              this.logger.warn(`Downloaded image too small (${fileSize} bytes) — discarding`);
+            // RunPod returns base64 data URI — decode and save
+            const { localUrl } = await this.downloadAndSaveRunpodImage(imageUrl);
+            if (!localUrl) {
+              this.logger.error('Failed to save RunPod base64 image');
               return '';
             }
             return localUrl;
           }
 
           if (currentStatus === 'FAILED' || currentStatus === 'CANCELLED') {
-            this.logger.error(`Flux/schnell request ${currentStatus}: ${JSON.stringify(statusResponse.data)}`);
+            this.logger.error(`RunPod job ${currentStatus}: ${JSON.stringify(result)}`);
             return '';
           }
         }
 
-        this.logger.error(`Flux/schnell timed out after 60s for request_id=${request_id}`);
+        this.logger.error(`RunPod timed out after 3 min for id=${runId}`);
         return '';
       } catch (error) {
         const err = error as any;
-        this.logger.error(`Flux/schnell error: status=${err?.response?.status}, data=${JSON.stringify(err?.response?.data)}, message=${err?.message}`);
+        this.logger.error(`RunPod error: status=${err?.response?.status}, data=${JSON.stringify(err?.response?.data)}, message=${err?.message}`);
         return '';
       }
     }
@@ -539,6 +529,39 @@ export class ChatService {
       firstMessage: girlData.firstMessage,
       avatarUrl,
     };
+  }
+
+  private async downloadAndSaveRunpodImage(dataUri: string): Promise<{ localUrl: string; fileSize: number }> {
+    try {
+      // RunPod returns data:image/png;base64,iVBOR...
+      const matches = dataUri.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/);
+      if (!matches) {
+        this.logger.error(`Invalid RunPod data URI format: ${dataUri.substring(0, 80)}...`);
+        return { localUrl: '', fileSize: 0 };
+      }
+      const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+      const fileSize = buffer.length;
+
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      const projectRoot = path.join(__dirname, '..', '..');
+      const filePath = path.join(projectRoot, 'uploads', 'images', fileName);
+
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      fs.writeFileSync(filePath, buffer);
+      this.logger.log(`Saved RunPod image: ${fileName} (${ext}, ${fileSize} bytes)`);
+
+      const fullUrl = `/uploads/images/${fileName}`;
+      return { localUrl: fullUrl, fileSize };
+    } catch (error) {
+      this.logger.error('Error saving RunPod image', error);
+      return { localUrl: '', fileSize: 0 };
+    }
   }
 
   private async downloadAndSaveFile(url: string, type: 'image' | 'video'): Promise<{ localUrl: string; fileSize: number }> {
