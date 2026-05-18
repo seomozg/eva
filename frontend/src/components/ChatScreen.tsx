@@ -392,26 +392,10 @@ const ChatScreen = () => {
       const userProfile = await usersAPI.getProfile();
       const userName = userProfile.firstName || 'дорогой';
 
-      const imageIndex = messages.findIndex(msg => msg.mediaUrl === imageUrl && msg.type === 'image');
-      let contextMessage = '';
-      if (imageIndex > 0) {
-        for (let i = imageIndex - 1; i >= 0; i--) {
-          if (messages[i].sender === 'user' && messages[i].type === 'text') {
-            contextMessage = messages[i].content;
-            break;
-          }
-        }
-      }
-
-      const prompt = `Сгенерируй короткое кокетливое сообщение (не более 15 слов, примерно 4 секунды речи), которое девушка сказала бы своему парню по имени ${userName}. Сообщение ОБЯЗАТЕЛЬНО должно содержать имя парня "${userName}" хотя бы один раз. Сделай его романтичным и игривым. Основывайся на этом сообщении: "${contextMessage}"\n\nФормат ответа: Только текст сообщения, без кавычек и пояснений.`;
-
-      const textResponse = await chatAPI.sendMessage([{ role: 'user', content: prompt }]);
-      const flirtText = textResponse.response.trim();
-
       const imageMessage = messages.find(msg => msg.mediaUrl === imageUrl && msg.type === 'image');
       const originalImageUrl = imageMessage?.originalMediaUrl || imageUrl;
 
-      const { videoUrl } = await chatAPI.generateVideoFromImage(originalImageUrl, flirtText);
+      const { videoUrl } = await chatAPI.generateVideoFromImage(originalImageUrl, userName);
 
       if (videoUrl) {
         const videoMessage: Message = {

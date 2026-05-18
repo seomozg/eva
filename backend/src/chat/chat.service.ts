@@ -476,7 +476,7 @@ export class ChatService {
         this.httpService.post(
           'https://fal.run/fal-ai/ltx-2.3-22b/distilled/image-to-video',
           {
-            prompt: `girl says: "${text}"`,
+            prompt: `girl teasing and whispering name ${text}, flirty, romantic, sensual`,
             image_url: fullImageUrl,
             num_frames: 121,
             fps: 25,
