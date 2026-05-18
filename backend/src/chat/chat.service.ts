@@ -174,6 +174,8 @@ export class ChatService {
   }
 
   async generateImage(prompt: string, baseImageUrl?: string, userId?: string, skipBalanceCheck: boolean = false): Promise<string> {
+    this.logger.log(`generateImage called: prompt="${prompt.substring(0, 120)}...", baseImageUrl=${!!baseImageUrl}, userId=${userId}`);
+
     // Check balance if userId provided and balance check is not skipped
     if (userId && !skipBalanceCheck) {
       const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -215,15 +217,18 @@ export class ChatService {
         const fullImageUrl = baseImageUrl.startsWith('/') ? this.getPublicUrl(baseImageUrl) : baseImageUrl;
 
         // Direct API call to Fal.ai
+        const editPayload = {
+          prompt,
+          image_size: 'auto_2K',
+          image_urls: [fullImageUrl],
+          enable_safety_checker: false
+        };
+        this.logger.log(`Fal.ai edit request: ${JSON.stringify({ url: 'https://fal.run/fal-ai/bytedance/seedream/v4.5/edit', body: editPayload })}`);
+
         const response = await firstValueFrom(
           this.httpService.post(
             'https://fal.run/fal-ai/bytedance/seedream/v4.5/edit',
-            {
-              prompt,
-              image_size: 'auto_2K',
-              image_urls: [fullImageUrl],
-              enable_safety_checker: false
-            },
+            editPayload,
             {
               headers: {
                 'Authorization': `Key ${apiKey}`,
@@ -255,7 +260,8 @@ export class ChatService {
         }
         return localUrl;
       } catch (error) {
-        this.logger.error('Error calling Fal.ai API', error);
+        const err = error as any;
+        this.logger.error(`Fal.ai edit error: status=${err?.response?.status}, data=${JSON.stringify(err?.response?.data)}, message=${err?.message}`);
         return '';
       }
     } else {
@@ -278,6 +284,7 @@ export class ChatService {
           num_images: 1,
           enable_safety_checker: false,
         };
+        this.logger.log(`Fal.ai request: ${JSON.stringify({ url: 'https://fal.run/fal-ai/z-image/turbo', body: requestData })}`);
 
         const createResponse = await firstValueFrom(
           this.httpService.post(
@@ -315,7 +322,8 @@ export class ChatService {
         }
         return localUrl;
       } catch (error) {
-        this.logger.error('Error calling fal.ai API', error);
+        const err = error as any;
+        this.logger.error(`Fal.ai z-image/turbo error: status=${err?.response?.status}, data=${JSON.stringify(err?.response?.data)}, message=${err?.message}`);
         return '';
       }
     }
