@@ -265,8 +265,8 @@ export class ChatService {
         return '';
       }
     } else {
-      // Use fal.ai for new image generation
-      this.logger.log('Generating new image using fal.ai...');
+      // Use fal.ai flux/schnell for new image generation
+      this.logger.log('Generating new image using fal.ai flux/schnell...');
       const apiKey = this.configService.get<string>('FAL_API_KEY');
       if (!apiKey || apiKey === 'your_fal_api_key_here') {
         this.logger.warn('fal.ai API key not set, skipping image generation');
@@ -274,21 +274,20 @@ export class ChatService {
       }
 
       try {
-        this.logger.log('Sending request to fal.ai API');
         const requestData = {
           prompt,
-          image_size: {
-            width: 1280,
-            height: 1280,
-          },
+          image_size: 'square_hd',
           num_images: 1,
           enable_safety_checker: false,
+          output_format: 'jpeg',
+          sync_mode: false,
         };
-        this.logger.log(`Fal.ai request: ${JSON.stringify({ url: 'https://fal.run/fal-ai/z-image/turbo', body: requestData })}`);
+        this.logger.log(`Fal.ai request: ${JSON.stringify({ url: 'https://queue.fal.run/fal-ai/flux/schnell', body: requestData })}`);
 
-        const createResponse = await firstValueFrom(
+        // Step 1: Submit to queue
+        const queueResponse = await firstValueFrom(
           this.httpService.post(
-            'https://fal.run/fal-ai/z-image/turbo',
+            'https://queue.fal.run/fal-ai/flux/schnell',
             requestData,
             {
               headers: {
@@ -299,31 +298,50 @@ export class ChatService {
           ),
         );
 
-        const responseData = createResponse.data;
-        this.logger.log(`fal.ai response: ${JSON.stringify(responseData)}`);
-        const imageUrl = responseData?.images?.[0]?.url;
-        if (!imageUrl) {
-          this.logger.error(`No image URL found in fal.ai response. Expected response.images[0].url. Payload: ${JSON.stringify(responseData)}`);
-          return '';
+        const { request_id, status, status_url } = queueResponse.data;
+        this.logger.log(`Queue submitted: request_id=${request_id}, status=${status}`);
+
+        // Step 2: Poll for completion (max 30 attempts, 2s interval)
+        for (let attempt = 0; attempt < 30; attempt++) {
+          await new Promise(r => setTimeout(r, 2000));
+          const statusResponse = await firstValueFrom(
+            this.httpService.get(status_url, {
+              headers: {
+                'Authorization': `Key ${apiKey}`,
+              },
+            }),
+          );
+          const currentStatus = statusResponse.data?.status;
+          this.logger.log(`Poll attempt ${attempt + 1}: status=${currentStatus}`);
+
+          if (currentStatus === 'COMPLETED') {
+            const result = statusResponse.data;
+            this.logger.log(`Flux/schnell response: ${JSON.stringify(result)}`);
+            const imageUrl = result?.images?.[0]?.url;
+            if (!imageUrl) {
+              this.logger.error(`No image URL in completed response: ${JSON.stringify(result)}`);
+              return '';
+            }
+
+            const { localUrl, fileSize } = await this.downloadAndSaveFile(imageUrl, 'image');
+            if (fileSize < 5000) {
+              this.logger.warn(`Downloaded image too small (${fileSize} bytes) — discarding`);
+              return '';
+            }
+            return localUrl;
+          }
+
+          if (currentStatus === 'FAILED' || currentStatus === 'CANCELLED') {
+            this.logger.error(`Flux/schnell request ${currentStatus}: ${JSON.stringify(statusResponse.data)}`);
+            return '';
+          }
         }
 
-        // Check for NSFW-blocked placeholder (Fal.ai returns tiny images for blocked content)
-        const hasNsfwConcepts = responseData?.has_nsfw_concepts;
-        if (hasNsfwConcepts && Array.isArray(hasNsfwConcepts) && hasNsfwConcepts.length > 0 && hasNsfwConcepts.every(Boolean)) {
-          this.logger.warn('Fal.ai returned all NSFW — image blocked by safety filter');
-          return '';
-        }
-
-        const { localUrl, fileSize } = await this.downloadAndSaveFile(imageUrl, 'image');
-        // If safety checker returned a tiny placeholder (sometimes with has_nsfw_concepts: false)
-        if (fileSize < 5000) {
-          this.logger.warn(`Downloaded image is too small (${fileSize} bytes) — likely NSFW placeholder, discarding`);
-          return '';
-        }
-        return localUrl;
+        this.logger.error(`Flux/schnell timed out after 60s for request_id=${request_id}`);
+        return '';
       } catch (error) {
         const err = error as any;
-        this.logger.error(`Fal.ai z-image/turbo error: status=${err?.response?.status}, data=${JSON.stringify(err?.response?.data)}, message=${err?.message}`);
+        this.logger.error(`Flux/schnell error: status=${err?.response?.status}, data=${JSON.stringify(err?.response?.data)}, message=${err?.message}`);
         return '';
       }
     }
