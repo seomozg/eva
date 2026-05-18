@@ -187,7 +187,7 @@ export class ChatService {
 
       // Check if user has sufficient balance
       if (user.balance < APP_CONFIG.PRICING.IMAGE_GENERATION) {
-        throw new HttpException('Insufficient balance for image generation', HttpStatus.BAD_REQUEST);
+        throw new HttpException('Недостаточно средств для генерации изображения. Пополните баланс.', HttpStatus.BAD_REQUEST);
       }
 
       // Deduct balance
@@ -367,7 +367,7 @@ export class ChatService {
       }
 
       if (user.balance < APP_CONFIG.PRICING.VIDEO_GENERATION) {
-        throw new HttpException('Insufficient balance for video generation', HttpStatus.BAD_REQUEST);
+        throw new HttpException('Недостаточно средств для генерации видео. Пополните баланс.', HttpStatus.BAD_REQUEST);
       }
 
       // Deduct balance
@@ -444,7 +444,7 @@ export class ChatService {
       }
 
       if (user.balance < APP_CONFIG.PRICING.VIDEO_GENERATION) {
-        throw new HttpException('Insufficient balance for video generation', HttpStatus.BAD_REQUEST);
+        throw new HttpException('Недостаточно средств для генерации видео. Пополните баланс.', HttpStatus.BAD_REQUEST);
       }
 
       // Deduct balance
