@@ -233,14 +233,26 @@ export class ChatService {
           ),
         );
 
-        this.logger.log(`Fal.ai response: ${JSON.stringify(response.data)}`);
-        const imageUrl = response.data?.images?.[0]?.url;
+        const responseData = response.data;
+        this.logger.log(`Fal.ai response: ${JSON.stringify(responseData)}`);
+        const imageUrl = responseData?.images?.[0]?.url;
         if (!imageUrl) {
           this.logger.error('No image URL found in Fal.ai response');
           return '';
         }
 
-        const localUrl = await this.downloadAndSaveFile(imageUrl, 'image');
+        // Check for NSFW-blocked placeholder
+        const hasNsfw = responseData?.has_nsfw_concepts;
+        if (hasNsfw && Array.isArray(hasNsfw) && hasNsfw.length > 0 && hasNsfw.every(Boolean)) {
+          this.logger.warn('Fal.ai edit returned all NSFW — image blocked by safety filter');
+          return '';
+        }
+
+        const { localUrl, fileSize } = await this.downloadAndSaveFile(imageUrl, 'image');
+        if (fileSize < 5000) {
+          this.logger.warn(`Downloaded edited image is too small (${fileSize} bytes) — likely NSFW placeholder, discarding`);
+          return '';
+        }
         return localUrl;
       } catch (error) {
         this.logger.error('Error calling Fal.ai API', error);
@@ -288,7 +300,19 @@ export class ChatService {
           return '';
         }
 
-        const localUrl = await this.downloadAndSaveFile(imageUrl, 'image');
+        // Check for NSFW-blocked placeholder (Fal.ai returns tiny images for blocked content)
+        const hasNsfwConcepts = responseData?.has_nsfw_concepts;
+        if (hasNsfwConcepts && Array.isArray(hasNsfwConcepts) && hasNsfwConcepts.length > 0 && hasNsfwConcepts.every(Boolean)) {
+          this.logger.warn('Fal.ai returned all NSFW — image blocked by safety filter');
+          return '';
+        }
+
+        const { localUrl, fileSize } = await this.downloadAndSaveFile(imageUrl, 'image');
+        // If safety checker returned a tiny placeholder (sometimes with has_nsfw_concepts: false)
+        if (fileSize < 5000) {
+          this.logger.warn(`Downloaded image is too small (${fileSize} bytes) — likely NSFW placeholder, discarding`);
+          return '';
+        }
         return localUrl;
       } catch (error) {
         this.logger.error('Error calling fal.ai API', error);
@@ -366,7 +390,7 @@ export class ChatService {
         return '';
       }
 
-      const localUrl = await this.downloadAndSaveFile(videoUrl, 'video');
+      const { localUrl } = await this.downloadAndSaveFile(videoUrl, 'video');
       return localUrl;
     } catch (error) {
       this.logger.error('Error calling Fal.ai API for video', error);
@@ -437,7 +461,7 @@ export class ChatService {
         return '';
       }
 
-      const localUrl = await this.downloadAndSaveFile(videoUrl, 'video');
+      const { localUrl } = await this.downloadAndSaveFile(videoUrl, 'video');
       return localUrl;
     } catch (error) {
       this.logger.error('Error calling Fal.ai API for video from image', error);
@@ -483,19 +507,47 @@ export class ChatService {
     };
   }
 
-  private async downloadAndSaveFile(url: string, type: 'image' | 'video'): Promise<string> {
+  private async downloadAndSaveFile(url: string, type: 'image' | 'video'): Promise<{ localUrl: string; fileSize: number }> {
     try {
       this.logger.log(`Downloading ${type} from: ${url}`);
       const response = await firstValueFrom(
         this.httpService.get(url, { responseType: 'arraybuffer' })
       );
 
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${type === 'image' ? 'jpg' : 'mp4'}`;
+      const buffer = Buffer.from(response.data);
+      const fileSize = buffer.length;
+
+      // Detect extension: prefer Content-Type header, fallback to URL extension, then default
+      let ext: string;
+      if (type === 'video') {
+        ext = 'mp4';
+      } else {
+        const contentType = (response.headers['content-type'] as string) || '';
+        if (contentType.includes('png')) {
+          ext = 'png';
+        } else if (contentType.includes('jpeg') || contentType.includes('jpg')) {
+          ext = 'jpg';
+        } else if (contentType.includes('webp')) {
+          ext = 'webp';
+        } else {
+          // Fallback: guess from URL
+          const urlLower = url.toLowerCase();
+          if (urlLower.includes('.png')) {
+            ext = 'png';
+          } else if (urlLower.includes('.webp')) {
+            ext = 'webp';
+          } else {
+            ext = 'jpg';
+          }
+        }
+      }
+
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
       // Use absolute path from project root for consistency
       const projectRoot = path.join(__dirname, '..', '..');
       const filePath = path.join(projectRoot, 'uploads', type === 'image' ? 'images' : 'videos', fileName);
 
-      this.logger.log(`Saving ${type} to: ${filePath}`);
+      this.logger.log(`Saving ${type} (${ext}, ${fileSize} bytes) to: ${filePath}`);
 
       // Ensure directory exists
       const dir = path.dirname(filePath);
@@ -505,17 +557,17 @@ export class ChatService {
       }
 
       // Save file
-      fs.writeFileSync(filePath, Buffer.from(response.data));
-      this.logger.log(`Successfully saved ${type} file: ${fileName}`);
+      fs.writeFileSync(filePath, buffer);
+      this.logger.log(`Successfully saved ${type} file: ${fileName} (${fileSize} bytes)`);
 
       // Return relative URL — frontend nginx proxies /uploads/ to backend
       const fullUrl = `/uploads/${type === 'image' ? 'images' : 'videos'}/${fileName}`;
       this.logger.log(`Returning server URL: ${fullUrl}`);
-      return fullUrl;
+      return { localUrl: fullUrl, fileSize };
     } catch (error) {
       this.logger.error(`Error downloading and saving ${type}:`, error);
       this.logger.error(`Failed URL: ${url}`);
-      return url; // Return original URL if download fails
+      return { localUrl: url, fileSize: 0 }; // Return original URL if download fails
     }
   }
 
