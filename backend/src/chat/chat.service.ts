@@ -11,6 +11,8 @@ import { MessageEvent } from '@nestjs/common';
 import { APP_CONFIG } from '../config/app.config';
 import * as fs from 'fs';
 import * as path from 'path';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const FormData = require('form-data');
 
 @Injectable()
 export class ChatService {
@@ -202,146 +204,157 @@ export class ChatService {
       await this.transactionRepository.save(transaction);
     }
 
-    // If baseImageUrl is provided and not empty, use Fal.ai for editing
+    // If baseImageUrl is provided, use Kie.ai Seedream 4.5 for image-to-image
     if (baseImageUrl && baseImageUrl.trim() !== '') {
-      // Use Fal.ai direct API for image editing
-      this.logger.log('Generating image using Fal.ai direct API (editing)...');
-      const apiKey = this.configService.get<string>('FAL_API_KEY');
-      if (!apiKey || apiKey === 'your_fal_api_key_here') {
-        this.logger.warn('Fal.ai API key not set, skipping image generation');
-        return '';
-      }
+      return this.generateImageEdit(prompt, baseImageUrl);
+    }
 
-      try {
-        this.logger.log(`Base image URL received: ${baseImageUrl}`);
-        const fullImageUrl = baseImageUrl.startsWith('/') ? this.getPublicUrl(baseImageUrl) : baseImageUrl;
+    // Text-to-image: use Dezgo Flux (fast, NSFW-capable)
+    return this.generateImageDezgo(prompt);
+  }
 
-        // Direct API call to Fal.ai
-        const editPayload = {
+  private async generateImageEdit(prompt: string, baseImageUrl: string): Promise<string> {
+    this.logger.log('Generating image-to-image using Kie.ai Seedream 4.5...');
+    const apiKey = this.configService.get<string>('KIE_API_KEY');
+    if (!apiKey) {
+      this.logger.warn('Kie.ai API key not set, skipping image editing');
+      return '';
+    }
+
+    try {
+      const fullImageUrl = baseImageUrl.startsWith('/') ? this.getPublicUrl(baseImageUrl) : baseImageUrl;
+
+      const payload = {
+        model: 'seedream/4.5-edit',
+        input: {
           prompt,
-          image_size: 'auto_2K',
           image_urls: [fullImageUrl],
-          enable_safety_checker: false
-        };
-        this.logger.log(`Fal.ai edit request: ${JSON.stringify({ url: 'https://fal.run/fal-ai/bytedance/seedream/v4.5/edit', body: editPayload })}`);
+          aspect_ratio: '1:1',
+          quality: 'basic',
+          nsfw_checker: false,
+        },
+      };
+      this.logger.log(`Kie.ai request: ${JSON.stringify(payload)}`);
 
-        const response = await firstValueFrom(
-          this.httpService.post(
-            'https://fal.run/fal-ai/bytedance/seedream/v4.5/edit',
-            editPayload,
-            {
-              headers: {
-                'Authorization': `Key ${apiKey}`,
-                'Content-Type': 'application/json',
-              },
-            },
-          ),
-        );
-
-        const responseData = response.data;
-        this.logger.log(`Fal.ai response: ${JSON.stringify(responseData)}`);
-        const imageUrl = responseData?.images?.[0]?.url;
-        if (!imageUrl) {
-          this.logger.error('No image URL found in Fal.ai response');
-          return '';
-        }
-
-        // Check for NSFW-blocked placeholder
-        const hasNsfw = responseData?.has_nsfw_concepts;
-        if (hasNsfw && Array.isArray(hasNsfw) && hasNsfw.length > 0 && hasNsfw.every(Boolean)) {
-          this.logger.warn('Fal.ai edit returned all NSFW — image blocked by safety filter');
-          return '';
-        }
-
-        const { localUrl, fileSize } = await this.downloadAndSaveFile(imageUrl, 'image');
-        if (fileSize < 5000) {
-          this.logger.warn(`Downloaded edited image is too small (${fileSize} bytes) — likely NSFW placeholder, discarding`);
-          return '';
-        }
-        return localUrl;
-      } catch (error) {
-        const err = error as any;
-        this.logger.error(`Fal.ai edit error: status=${err?.response?.status}, data=${JSON.stringify(err?.response?.data)}, message=${err?.message}`);
-        return '';
-      }
-    } else {
-      // Use RunPod Serverless for NSFW-capable image generation
-      this.logger.log('Generating image using RunPod...');
-      const runpodKey = this.configService.get<string>('RUNPOD_API_KEY');
-      if (!runpodKey) {
-        this.logger.warn('RunPod API key not set, skipping image generation');
-        return '';
-      }
-
-      try {
-        const requestData = {
-          input: {
-            prompt,
-            negative_prompt: 'blurry, low quality, deformed, ugly, text, watermark, signature',
-            width: 1024,
-            height: 1024,
-            num_inference_steps: 25,
-            guidance_scale: 7.5,
-            num_images: 1,
+      const createResponse = await firstValueFrom(
+        this.httpService.post('https://api.kie.ai/api/v1/jobs/createTask', payload, {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
           },
-        };
-        const runpodUrl = 'https://api.runpod.ai/v2/w3lcotim2xnzhd/run';
-        this.logger.log(`RunPod request: ${JSON.stringify({ url: runpodUrl, body: requestData })}`);
+        }),
+      );
 
-        const runResponse = await firstValueFrom(
-          this.httpService.post(runpodUrl, requestData, {
-            headers: {
-              'Authorization': `Bearer ${runpodKey}`,
-              'Content-Type': 'application/json',
-            },
+      const taskId = createResponse.data?.data?.taskId;
+      if (!taskId) {
+        this.logger.error(`Kie.ai no taskId: ${JSON.stringify(createResponse.data)}`);
+        return '';
+      }
+      this.logger.log(`Kie.ai task created: ${taskId}`);
+
+      // Poll for completion (max 30 attempts, 2s interval = 60s)
+      for (let attempt = 0; attempt < 30; attempt++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const statusResponse = await firstValueFrom(
+          this.httpService.get(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
+            headers: { 'Authorization': `Bearer ${apiKey}` },
           }),
         );
 
-        const { id: runId, status } = runResponse.data;
-        this.logger.log(`RunPod job submitted: id=${runId}, status=${status}`);
+        const state = statusResponse.data?.data?.state;
+        this.logger.log(`Kie.ai poll ${attempt + 1}: state=${state}`);
 
-        // Poll /status/{id} until COMPLETED (max 60 attempts, 3s interval = 3 min)
-        for (let attempt = 0; attempt < 60; attempt++) {
-          await new Promise(r => setTimeout(r, 3000));
-          const statusResponse = await firstValueFrom(
-            this.httpService.get(`https://api.runpod.ai/v2/w3lcotim2xnzhd/status/${runId}`, {
-              headers: { 'Authorization': `Bearer ${runpodKey}` },
-            }),
-          );
-
-          const result = statusResponse.data;
-          const currentStatus = result?.status;
-          this.logger.log(`RunPod poll ${attempt + 1}: status=${currentStatus}`);
-
-          if (currentStatus === 'COMPLETED') {
-            const imageUrl = result?.output?.image_url;
-            if (!imageUrl) {
-              this.logger.error(`No image_url in RunPod result: ${JSON.stringify(result)}`);
-              return '';
-            }
-
-            // RunPod returns base64 data URI — decode and save
-            const { localUrl } = await this.downloadAndSaveRunpodImage(imageUrl);
-            if (!localUrl) {
-              this.logger.error('Failed to save RunPod base64 image');
+        if (state === 'success') {
+          const resultJson = statusResponse.data?.data?.resultJson;
+          const result = JSON.parse(resultJson || '{}');
+          const resultUrls = result?.resultUrls;
+          if (resultUrls && resultUrls.length > 0) {
+            const imageUrl = resultUrls[0];
+            const { localUrl, fileSize } = await this.downloadAndSaveFile(imageUrl, 'image');
+            if (fileSize < 5000) {
+              this.logger.warn(`Kie.ai image too small (${fileSize} bytes) — discarding`);
               return '';
             }
             return localUrl;
           }
-
-          if (currentStatus === 'FAILED' || currentStatus === 'CANCELLED') {
-            this.logger.error(`RunPod job ${currentStatus}: ${JSON.stringify(result)}`);
-            return '';
-          }
+          this.logger.error(`Kie.ai no resultUrls: ${resultJson}`);
+          return '';
         }
 
-        this.logger.error(`RunPod timed out after 3 min for id=${runId}`);
-        return '';
-      } catch (error) {
-        const err = error as any;
-        this.logger.error(`RunPod error: status=${err?.response?.status}, data=${JSON.stringify(err?.response?.data)}, message=${err?.message}`);
+        if (state === 'fail') {
+          this.logger.error(`Kie.ai task failed: ${JSON.stringify(statusResponse.data?.data)}`);
+          return '';
+        }
+      }
+
+      this.logger.error(`Kie.ai timed out for taskId=${taskId}`);
+      return '';
+    } catch (error) {
+      const err = error as any;
+      this.logger.error(`Kie.ai error: ${err?.message}`, err?.response?.data);
+      return '';
+    }
+  }
+
+  private async generateImageDezgo(prompt: string): Promise<string> {
+    this.logger.log('Generating image using Dezgo Flux...');
+    const dezgoKey = this.configService.get<string>('DEZGO_API_KEY');
+    if (!dezgoKey) {
+      this.logger.warn('Dezgo API key not set, skipping image generation');
+      return '';
+    }
+
+    try {
+      const form = new (FormData as any)();
+      form.append('prompt', prompt);
+      form.append('width', '1024');
+      form.append('height', '1024');
+      form.append('steps', '4');
+
+      this.logger.log(`Dezgo request: prompt="${prompt.substring(0, 80)}..."`);
+
+      const response = await firstValueFrom(
+        this.httpService.post('https://api.dezgo.com/text2image_flux', form, {
+          headers: {
+            'X-Dezgo-Key': dezgoKey,
+            ...form.getHeaders(),
+          },
+          responseType: 'arraybuffer',
+        }),
+      );
+
+      const buffer = Buffer.from(response.data);
+      const fileSize = buffer.length;
+
+      if (fileSize < 5000) {
+        this.logger.error(`Dezgo returned too small response (${fileSize} bytes)`);
         return '';
       }
+
+      // Check if it's actually an image (PNG starts with 89 50 4E 47)
+      if (buffer[0] !== 0x89 && buffer[1] !== 0x50) {
+        const text = buffer.toString('utf-8').substring(0, 200);
+        this.logger.error(`Dezgo returned non-image: ${text}`);
+        return '';
+      }
+
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.png`;
+      const projectRoot = path.join(__dirname, '..', '..');
+      const filePath = path.join(projectRoot, 'uploads', 'images', fileName);
+
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      fs.writeFileSync(filePath, buffer);
+      this.logger.log(`Saved Dezgo image: ${fileName} (${fileSize} bytes)`);
+
+      return `/uploads/images/${fileName}`;
+    } catch (error) {
+      const err = error as any;
+      this.logger.error(`Dezgo error: ${err?.message}`, err?.response?.data);
+      return '';
     }
   }
 
@@ -529,39 +542,6 @@ export class ChatService {
       firstMessage: girlData.firstMessage,
       avatarUrl,
     };
-  }
-
-  private async downloadAndSaveRunpodImage(dataUri: string): Promise<{ localUrl: string; fileSize: number }> {
-    try {
-      // RunPod returns data:image/png;base64,iVBOR...
-      const matches = dataUri.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/);
-      if (!matches) {
-        this.logger.error(`Invalid RunPod data URI format: ${dataUri.substring(0, 80)}...`);
-        return { localUrl: '', fileSize: 0 };
-      }
-      const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-      const base64Data = matches[2];
-      const buffer = Buffer.from(base64Data, 'base64');
-      const fileSize = buffer.length;
-
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
-      const projectRoot = path.join(__dirname, '..', '..');
-      const filePath = path.join(projectRoot, 'uploads', 'images', fileName);
-
-      const dir = path.dirname(filePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-
-      fs.writeFileSync(filePath, buffer);
-      this.logger.log(`Saved RunPod image: ${fileName} (${ext}, ${fileSize} bytes)`);
-
-      const fullUrl = `/uploads/images/${fileName}`;
-      return { localUrl: fullUrl, fileSize };
-    } catch (error) {
-      this.logger.error('Error saving RunPod image', error);
-      return { localUrl: '', fileSize: 0 };
-    }
   }
 
   private async downloadAndSaveFile(url: string, type: 'image' | 'video'): Promise<{ localUrl: string; fileSize: number }> {
